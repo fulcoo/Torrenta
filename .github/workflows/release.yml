@@ -1,0 +1,48 @@
+name: Build and Upload Release Assets
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger when pushing a tag like v1.0.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Upload Release Assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Project
+        run: npm run build
+
+      - name: Package Dist for Alternative WebUI
+        # Since `npm run build` outputs to `dist/public`,
+        # we zip the `public` folder inside `dist` so that when extracted,
+        # it extracts into a `public/` directory (e.g. `public/assets/`, `public/index.html`, etc.)
+        # matching what update-torrenta.sh expects.
+        run: |
+          cd dist
+          zip -r ../torrenta.zip public
+
+      - name: Create GitHub Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: torrenta.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

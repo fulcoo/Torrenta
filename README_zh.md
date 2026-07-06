@@ -1,9 +1,9 @@
-# 🚀 Torrenta - 适用于下载器的通用 WebUI 客户端
+# 🚀 Torrenta - 高颜值 qBittorrent WebUI 客户端
 
 <div align="center">
   <img src="torrenta.png" alt="Torrenta Preview" width="800" style="border-radius: 12px; margin: 16px 0;" />
-  <p><b>高颜值、响应式、轻量级的通用下载器 Web 客户端</b></p>
-  <p>支持 <b>qBittorrent</b> (HTTP API v2) 深度整合，Transmission & Aria2 适配筹备中</p>
+  <p><b>高颜值、响应式、轻量级的 qBittorrent WebUI 客户端</b></p>
+  <p>支持 <b>qBittorrent</b> (HTTP API v2) 深度整合，带来如丝般顺滑的现代化种子管理面板。</p>
   <p>
     <a href="README.md"><b>English README</b></a> |
     <a href="doc/user_manual_zh.md"><b>📖 官方安装与使用手册</b></a> |
@@ -38,10 +38,24 @@
 
 这里是极简启动指南。如需查看完整的 **CORS 跨域排错**、**本地备用 WebUI 安装** 或 **定时自动更新脚本配置**，请参阅 👉 **[详细安装与使用手册](doc/user_manual_zh.md)**。
 
-### 🐳 使用 Docker 一键运行（推荐）
+### 🐳 使用 Docker 运行（推荐）
 
+目前您可以直接拉取 Docker Hub 上的官方编译镜像 **`fulcoo/torrenta:latest`** 来进行快速部署。
+
+#### 方案一：Docker Run 命令行启动（最快）
+```bash
+docker run -d \
+  --name torrenta \
+  -p 3000:80 \
+  -e QBITTORRENT_URL=http://your-qbittorrent-ip:8081 \
+  -e QBITTORRENT_HOST=your-qbittorrent-ip:8081 \
+  --restart unless-stopped \
+  fulcoo/torrenta:latest
+```
+
+#### 方案二：Docker Compose 启动
 1. 确认您已有一个正在运行的 qBittorrent。
-2. 打开并编辑 [docker-compose.yml](docker-compose.yml)，修改环境变量：
+2. 项目中内置的 [docker-compose.yml](docker-compose.yml) 已经默认配置为拉取官方镜像 `fulcoo/torrenta:latest`。编辑该文件配置环境变量：
    ```yaml
    environment:
      - QBITTORRENT_URL=http://host.docker.internal:8081  # qBittorrent 的 WebUI 访问地址
@@ -51,7 +65,7 @@
    ```bash
    docker compose up -d
    ```
-4. 访问 `http://localhost:3000` 即可开始使用！
+4. 在浏览器中访问 `http://localhost:3000` 即可开始使用！
 
 ### 📂 备用 WebUI 编译模式
 

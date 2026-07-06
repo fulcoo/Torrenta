@@ -9,6 +9,12 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # Endpoint to retrieve autologin credentials if configured in Docker env
+    location = /api/torrenta-autologin {
+        default_type application/json;
+        return 200 '{"username": "${QBITTORRENT_USER}", "password": "${QBITTORRENT_PASS}"}';
+    }
+
     # Proxy the qBittorrent HTTP API requests
     location /api/v2/ {
         proxy_pass ${QBITTORRENT_URL}/api/v2/;

@@ -1,9 +1,9 @@
-# 🚀 Torrenta - Universal WebUI for Downloaders
+# 🚀 Torrenta - Beautiful WebUI for qBittorrent
 
 <div align="center">
   <img src="torrenta.png" alt="Torrenta Preview" width="800" style="border-radius: 12px; margin: 16px 0;" />
-  <p><b>A premium, responsive, and lightweight web client for downloaders.</b></p>
-  <p>Featuring deep integration for <b>qBittorrent</b> (HTTP API v2). Support for Transmission & Aria2 is currently in development.</p>
+  <p><b>A beautiful, easy-to-use, and lightweight WebUI client for qBittorrent.</b></p>
+  <p>Featuring deep integration for <b>qBittorrent</b> (HTTP API v2) to deliver a fluid and modern torrenting dashboard.</p>
 
   <p>
     <a href="README_zh.md"><b>🇨🇳 中文说明 (Chinese README)</b></a> |
@@ -61,10 +61,24 @@ Torrenta's Docker deployment **removes all these barriers**:
 
 This is a quick start guide. For advanced topics like manual installation, alternate WebUI setups, and cron scripting for automatic updates, please read the 👉 **[Detailed User Manual](doc/user_manual.md)**.
 
-### 🐳 Run via Docker Compose (Recommended)
+### 🐳 Run via Docker (Recommended)
 
+You can run Torrenta directly by pulling the official Docker image `fulcoo/torrenta:latest` from Docker Hub:
+
+#### Option A: Docker Run (Fastest)
+```bash
+docker run -d \
+  --name torrenta \
+  -p 3000:80 \
+  -e QBITTORRENT_URL=http://your-qbittorrent-ip:8081 \
+  -e QBITTORRENT_HOST=your-qbittorrent-ip:8081 \
+  --restart unless-stopped \
+  fulcoo/torrenta:latest
+```
+
+#### Option B: Docker Compose
 1. Ensure you have an existing qBittorrent instance running on your host machine or NAS.
-2. Open [docker-compose.yml](docker-compose.yml) and configure your qBittorrent parameters:
+2. The included [docker-compose.yml](docker-compose.yml) is preconfigured to use the official Docker Hub image `fulcoo/torrenta:latest`. Simply edit the variables:
    ```yaml
    environment:
      - QBITTORRENT_URL=http://host.docker.internal:8081  # Address Torrenta uses in the backend

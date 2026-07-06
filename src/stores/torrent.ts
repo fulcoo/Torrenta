@@ -204,6 +204,22 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     }
 
     try {
+      // Check for autologin credentials served by the Nginx proxy
+      try {
+        const res = await window.fetch('/api/torrenta-autologin');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.username && data.password) {
+            // Update config if username or password has changed
+            if (appStore.username !== data.username || appStore.password !== data.password) {
+              appStore.saveConfig('', data.username, data.password, 'qbittorrent');
+            }
+          }
+        }
+      } catch (e) {
+        // Safe to ignore, endpoint might not exist (e.g. in Alternative WebUI mode)
+      }
+
       driver = DownloaderFactory.create(appStore.driverType);
       const success = await driver.connect(
         appStore.url,
