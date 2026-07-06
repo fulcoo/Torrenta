@@ -2,6 +2,7 @@
   "name": "torrenta",
   "private": true,
   "version": "0.0.1",
+  "description": "✨ A beautiful, easy-to-use, and lightweight universal WebUI client for downloaders. 🚀",
   "type": "module",
   "scripts": {
     "dev": "vite",

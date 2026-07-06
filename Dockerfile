@@ -1,8 +1,8 @@
 # Stage 1: Build the Vue application
-FROM node:20-alpine AS build-stage
+FROM node:20-slim AS build-stage
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 COPY . .
 RUN npm run build
 
