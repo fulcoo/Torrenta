@@ -25,8 +25,8 @@
 ### 📝 部署步骤
 1. 打开 [docker-compose.yml](../docker-compose.yml)。
 2. 配置环境变量：
-   - **`QBITTORRENT_URL`**：Torrenta 容器连接 qBittorrent 服务的内部地址（如宿主机上的 `http://host.docker.internal:8081` 或同网络容器名 `http://qbittorrent:8080`）。
-   - **`QBITTORRENT_HOST`**：qBittorrent 期望在 Host 标头中看到的域名和端口。必须设为 qBittorrent 实际运行的地址（如 `localhost:8081` 或 `127.0.0.1:8081`），用以通过 qBittorrent 的 **主机标头验证 (Host Header Validation)**。
+   - **`QBITTORRENT_URL`**：Torrenta 容器连接 qBittorrent 服务的内部地址（如宿主机上的 `http://host.docker.internal:8080` 或同网络容器名 `http://qbittorrent:8080`，其中 `8080` 请替换为您的 qBittorrent WebUI 端口）。
+   - **`QBITTORRENT_HOST`**：qBittorrent 期望在 Host 标头中看到的域名和端口。必须设为 qBittorrent 实际运行的地址（如 `localhost:8080` 或 `127.0.0.1:8080`，其中 `8080` 请替换为您的 qBittorrent WebUI 端口），用以通过 qBittorrent 的 **主机标头验证 (Host Header Validation)**。
    - **`QBITTORRENT_USER`**（可选）：您的 qBittorrent WebUI 登录用户名。配置后，网页将在打开时自动静默登录。
    - **`QBITTORRENT_PASS`**（可选）：您的 qBittorrent WebUI 登录密码。配置后，网页将在打开时自动静默登录。
 3. 启动容器：

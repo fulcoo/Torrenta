@@ -308,16 +308,20 @@ const hasInvalidUrlsInRaw = computed(() => {
   });
 });
 
+const MAX_TIERS = 100;
+
 // Sync conversion functions
 function visualToRaw(list: { id: number; url: string; tier: number }[]): string {
   if (list.length === 0) return '';
-  const maxT = Math.max(0, ...list.map(t => t.tier));
+  const rawMaxT = Math.max(0, ...list.map(t => t.tier));
+  const maxT = Math.min(Math.max(0, isFinite(rawMaxT) && !isNaN(rawMaxT) ? rawMaxT : 0), MAX_TIERS - 1);
   const linesByTier: string[][] = Array.from({ length: maxT + 1 }, () => []);
   
   list.forEach(t => {
     const u = t.url.trim();
     if (u) {
-      linesByTier[t.tier].push(u);
+      const sanitizedTier = Math.min(Math.max(0, isFinite(t.tier) && !isNaN(t.tier) ? t.tier : 0), maxT);
+      linesByTier[sanitizedTier].push(u);
     }
   });
   
@@ -328,13 +332,21 @@ function rawToVisual(text: string): { id: number; url: string; tier: number }[] 
   const lines = text.split(/\r?\n/);
   const result: { id: number; url: string; tier: number }[] = [];
   let currentT = 0;
+  let hasTrackersInCurrentTier = false;
   
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed === '') {
-      currentT++;
+      if (hasTrackersInCurrentTier) {
+        currentT++;
+        hasTrackersInCurrentTier = false;
+      }
     } else {
+      if (currentT >= MAX_TIERS) {
+        currentT = MAX_TIERS - 1;
+      }
       result.push({ id: tempIdCounter++, url: trimmed, tier: currentT });
+      hasTrackersInCurrentTier = true;
     }
   }
   return result;
@@ -346,7 +358,8 @@ watch(viewMode, (newMode) => {
     rawText.value = visualToRaw(trackers.value);
   } else if (newMode === 'visual') {
     trackers.value = rawToVisual(rawText.value);
-    const maxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+    const rawMaxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+    const maxT = Math.min(Math.max(0, isFinite(rawMaxT) && !isNaN(rawMaxT) ? rawMaxT : 0), MAX_TIERS - 1);
     tiersCount.value = Math.max(1, maxT + 1);
   }
 });
@@ -370,9 +383,10 @@ watch(() => props.open, async (isOpen) => {
       if (props.torrentIds.length === 1) {
         // Single task load
         const res = await torrentStore.getTorrentTrackers(props.torrentIds[0]);
-        trackers.value = res.map(t => ({ id: tempIdCounter++, url: t.url, tier: t.tier }));
+        trackers.value = res.map(t => ({ id: tempIdCounter++, url: t.url, tier: Math.min(Math.max(0, t.tier), MAX_TIERS - 1) }));
         
-        const maxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+        const rawMaxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+        const maxT = Math.min(Math.max(0, isFinite(rawMaxT) && !isNaN(rawMaxT) ? rawMaxT : 0), MAX_TIERS - 1);
         tiersCount.value = Math.max(1, maxT + 1);
       } else if (props.torrentIds.length > 1) {
         // Multi-task load (Common Intersection)
@@ -399,14 +413,15 @@ watch(() => props.open, async (isOpen) => {
           }
         }
 
-        trackers.value = commonList.map(t => ({ id: tempIdCounter++, url: t.url, tier: t.tier }));
+        trackers.value = commonList.map(t => ({ id: tempIdCounter++, url: t.url, tier: Math.min(Math.max(0, t.tier), MAX_TIERS - 1) }));
 
         if (commonList.length === 0) {
           // Empty Canvas Warning Tip
           infoMessage.value = t('torrent.emptyCanvasTip');
           tiersCount.value = 1;
         } else {
-          const maxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+          const rawMaxT = trackers.value.length > 0 ? Math.max(...trackers.value.map(t => t.tier)) : 0;
+          const maxT = Math.min(Math.max(0, isFinite(rawMaxT) && !isNaN(rawMaxT) ? rawMaxT : 0), MAX_TIERS - 1);
           tiersCount.value = Math.max(1, maxT + 1);
         }
       }
@@ -444,7 +459,7 @@ const trackersByTier = computed(() => {
 
 // Operations in visual view mode
 function addTracker(tier: number) {
-  trackers.value.push({ id: tempIdCounter++, url: '', tier });
+  trackers.value.push({ id: tempIdCounter++, url: '', tier: Math.min(Math.max(0, tier), MAX_TIERS - 1) });
 }
 
 function deleteTrackerById(id: number) {
@@ -452,14 +467,16 @@ function deleteTrackerById(id: number) {
 }
 
 function addTier() {
-  tiersCount.value++;
+  if (tiersCount.value < MAX_TIERS) {
+    tiersCount.value++;
+  }
 }
 
 // Watch tiers dropdown select to auto-expand tiersCount if user assigns to an index outside current count
 watch(trackers, (newList) => {
   newList.forEach(t => {
     if (t.tier >= tiersCount.value) {
-      tiersCount.value = t.tier + 1;
+      tiersCount.value = Math.min(t.tier + 1, MAX_TIERS);
     }
   });
 }, { deep: true });

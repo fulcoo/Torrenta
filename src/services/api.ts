@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { safeStorage } from '@/utils/storage';
 
 // Create a generic axios instance
 export const api = axios.create({
@@ -39,18 +40,11 @@ export function resolveBaseUrl(configuredUrl?: string): string {
 
 // Request interceptor to dynamically rewrite the baseURL based on current storage configs
 api.interceptors.request.use((config) => {
-  const storeData = localStorage.getItem('torrenta_app_config');
+  const storeData = safeStorage.getJSON<{ url?: string }>('torrenta_app_config', {});
   let finalBaseUrl = '/api/v2';
 
-  if (storeData) {
-    try {
-      const parsed = JSON.parse(storeData);
-      if (parsed && parsed.url) {
-        finalBaseUrl = resolveBaseUrl(parsed.url);
-      }
-    } catch (e) {
-      console.error('Failed to parse config for API base URL resolver:', e);
-    }
+  if (storeData && storeData.url) {
+    finalBaseUrl = resolveBaseUrl(storeData.url);
   }
 
   config.baseURL = finalBaseUrl;

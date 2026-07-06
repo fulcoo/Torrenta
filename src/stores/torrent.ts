@@ -4,6 +4,7 @@ import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/to
 import type { AddTorrentOptions } from '@/services/adapters/interface';
 import { DownloaderFactory } from '@/services/adapters/factory';
 import { useAppStore } from './app';
+import { safeStorage } from '@/utils/storage';
 
 export const useTorrentStore = defineStore('torrentStore', () => {
   const appStore = useAppStore();
@@ -17,12 +18,12 @@ export const useTorrentStore = defineStore('torrentStore', () => {
 
   // Keep track of user custom categories locally in case the downloader doesn't support writing them
   const customCategories = ref<string[]>(
-    JSON.parse(localStorage.getItem('torrenta_custom_categories') || '[]')
+    safeStorage.getJSON('torrenta_custom_categories', [])
   );
 
   // Keep track of user custom tags locally and system tags from qBittorrent
   const customTags = ref<string[]>(
-    JSON.parse(localStorage.getItem('torrenta_custom_tags') || '[]')
+    safeStorage.getJSON('torrenta_custom_tags', [])
   );
   const systemTags = ref<string[]>([]);
   const simulatedTags = ref<string[]>(['Important', 'Entertainment', 'Work']);
@@ -35,11 +36,11 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   const simulatedTorrents = ref<UnifiedTorrent[]>([]);
 
   const simulatedTrackersMap = ref<Record<string, { url: string; tier: number }[]>>(
-    JSON.parse(localStorage.getItem('torrenta_simulated_trackers') || '{}')
+    safeStorage.getJSON('torrenta_simulated_trackers', {})
   );
 
   function saveSimulatedTrackers() {
-    localStorage.setItem('torrenta_simulated_trackers', JSON.stringify(simulatedTrackersMap.value));
+    safeStorage.setJSON('torrenta_simulated_trackers', simulatedTrackersMap.value);
   }
 
   const SIMULATED_TEMPLATES = [
@@ -140,18 +141,18 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     const clean = cat.trim();
     if (clean && !customCategories.value.includes(clean)) {
       customCategories.value.push(clean);
-      localStorage.setItem(
+      safeStorage.setJSON(
         'torrenta_custom_categories',
-        JSON.stringify(customCategories.value)
+        customCategories.value
       );
     }
   }
 
   function removeCustomCategory(cat: string) {
     customCategories.value = customCategories.value.filter((c) => c !== cat);
-    localStorage.setItem(
+    safeStorage.setJSON(
       'torrenta_custom_categories',
-      JSON.stringify(customCategories.value)
+      customCategories.value
     );
   }
 
@@ -175,18 +176,18 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     const clean = tag.trim();
     if (clean && !customTags.value.includes(clean)) {
       customTags.value.push(clean);
-      localStorage.setItem(
+      safeStorage.setJSON(
         'torrenta_custom_tags',
-        JSON.stringify(customTags.value)
+        customTags.value
       );
     }
   }
 
   function removeCustomTag(tag: string) {
     customTags.value = customTags.value.filter((t) => t !== tag);
-    localStorage.setItem(
+    safeStorage.setJSON(
       'torrenta_custom_tags',
-      JSON.stringify(customTags.value)
+      customTags.value
     );
   }
 
@@ -275,7 +276,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
               next.uploadSpeed = Math.max(10 * 1024, Math.floor(next.uploadSpeed * ratio));
               
               // Increment progress: speed in bytes/sec * 1.5s
-              const delta = (next.downloadSpeed * 1.5) / next.size * 100;
+              const delta = next.size > 0 ? (next.downloadSpeed * 1.5) / next.size * 100 : 0;
               next.progress = Math.min(100, next.progress + delta);
               
               if (next.progress >= 100) {
@@ -285,12 +286,14 @@ export const useTorrentStore = defineStore('torrentStore', () => {
                 next.uploadSpeed = Math.floor((Math.random() * 3 + 1) * 1024 * 1024);
                 next.eta = 0;
               } else {
-                next.eta = Math.max(1, Math.round(((next.size * (1 - next.progress / 100)) / next.downloadSpeed)));
+                next.eta = next.downloadSpeed > 0
+                  ? Math.max(1, Math.round(((next.size * (1 - next.progress / 100)) / next.downloadSpeed)))
+                  : 0;
               }
             } else if (next.status === 'seeding') {
               const ratio = 0.9 + Math.random() * 0.2;
               next.uploadSpeed = Math.max(512 * 1024, Math.floor(next.uploadSpeed * ratio));
-              next.ratio += (next.uploadSpeed * 1.5) / next.size;
+              next.ratio += next.size > 0 ? (next.uploadSpeed * 1.5) / next.size : 0;
               next.ratio = parseFloat(next.ratio.toFixed(2));
             } else if (next.status === 'checking') {
               next.progress = Math.min(100, next.progress + Math.random() * 4 + 2);

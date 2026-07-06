@@ -357,25 +357,26 @@ const statusIcon = computed(() => {
 // Utility format size
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
-  if (bytes < 0) return t('common.unknown');
+  if (bytes < 0 || !isFinite(bytes) || isNaN(bytes)) return t('common.unknown');
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 // Utility format speed
 function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec === 0) return '0 B/s';
+  if (bytesPerSec < 0 || !isFinite(bytesPerSec) || isNaN(bytesPerSec)) return t('common.unknown');
   const k = 1024;
   const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytesPerSec) / Math.log(k)), sizes.length - 1);
   return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
 // Utility format ETA
 function formatEta(seconds: number): string {
-  if (seconds === 8640000 || seconds >= 315360000) return '∞';
+  if (seconds === 8640000 || seconds >= 315360000 || !isFinite(seconds) || isNaN(seconds)) return '∞';
   if (seconds <= 0) return '0s';
   
   const w = Math.floor(seconds / (86400 * 7));

@@ -70,8 +70,8 @@ You can run Torrenta directly by pulling the official Docker image `fulcoo/torre
 docker run -d \
   --name torrenta \
   -p 3000:80 \
-  -e QBITTORRENT_URL=http://your-qbittorrent-ip:8081 \
-  -e QBITTORRENT_HOST=your-qbittorrent-ip:8081 \
+  -e QBITTORRENT_URL=http://<your-qbittorrent-ip>:<your-qbittorrent-port-default-8080> \
+  -e QBITTORRENT_HOST=<your-qbittorrent-ip>:<your-qbittorrent-port-default-8080> \
   --restart unless-stopped \
   fulcoo/torrenta:latest
 ```
@@ -81,8 +81,8 @@ docker run -d \
 2. The included [docker-compose.yml](docker-compose.yml) is preconfigured to use the official Docker Hub image `fulcoo/torrenta:latest`. Simply edit the variables:
    ```yaml
    environment:
-     - QBITTORRENT_URL=http://host.docker.internal:8081  # Address Torrenta uses in the backend
-     - QBITTORRENT_HOST=localhost:8081                  # Hostname/Port qBittorrent expects
+     QBITTORRENT_URL: "http://host.docker.internal:<your-qbittorrent-port-default-8080>"  # Address Torrenta uses in the backend
+     QBITTORRENT_HOST: "localhost:<your-qbittorrent-port-default-8080>"                  # Hostname/Port qBittorrent expects
    ```
 3. Start Torrenta:
    ```bash

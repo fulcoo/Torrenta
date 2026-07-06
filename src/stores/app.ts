@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { safeStorage } from '@/utils/storage';
 
 export interface CategoryConfig {
   name: string;
@@ -7,22 +8,22 @@ export interface CategoryConfig {
 }
 
 export const useAppStore = defineStore('appStore', () => {
-  const url = ref(localStorage.getItem('torrenta_url') || '');
-  const username = ref(localStorage.getItem('torrenta_username') || '');
-  const password = ref(localStorage.getItem('torrenta_password') || '');
+  const url = ref(safeStorage.getItem('torrenta_url') || '');
+  const username = ref(safeStorage.getItem('torrenta_username') || '');
+  const password = ref(safeStorage.getItem('torrenta_password') || '');
   const driverType = ref<'qbittorrent' | 'transmission' | 'aria2'>(
-    (localStorage.getItem('torrenta_driver_type') as any) || 'qbittorrent'
+    (safeStorage.getItem('torrenta_driver_type') as any) || 'qbittorrent'
   );
-  const theme = ref(localStorage.getItem('torrenta_theme') || 'dracula');
+  const theme = ref(safeStorage.getItem('torrenta_theme') || 'dracula');
   const locale = ref<'zh' | 'en'>(
-    (localStorage.getItem('torrenta_locale') as any) || 
+    (safeStorage.getItem('torrenta_locale') as any) || 
     (navigator.language.startsWith('zh') ? 'zh' : 'en')
   );
   const categoryConfigs = ref<CategoryConfig[]>(
-    JSON.parse(localStorage.getItem('torrenta_category_configs') || '[]')
+    safeStorage.getJSON('torrenta_category_configs', [])
   );
-  const simulationMode = ref(import.meta.env.DEV && localStorage.getItem('torrenta_simulation_mode') === 'true');
-  const simulatedCount = ref(parseInt(localStorage.getItem('torrenta_simulated_count') || '12', 10));
+  const simulationMode = ref(import.meta.env.DEV && safeStorage.getItem('torrenta_simulation_mode') === 'true');
+  const simulatedCount = ref(parseInt(safeStorage.getItem('torrenta_simulated_count') || '12', 10));
   const showMobileSidebar = ref(false);
 
   function saveConfig(
@@ -36,28 +37,28 @@ export const useAppStore = defineStore('appStore', () => {
     password.value = newPass;
     driverType.value = newDriver;
 
-    localStorage.setItem('torrenta_url', newUrl);
-    localStorage.setItem('torrenta_username', newUser);
-    localStorage.setItem('torrenta_password', newPass);
-    localStorage.setItem('torrenta_driver_type', newDriver);
+    safeStorage.setItem('torrenta_url', newUrl);
+    safeStorage.setItem('torrenta_username', newUser);
+    safeStorage.setItem('torrenta_password', newPass);
+    safeStorage.setItem('torrenta_driver_type', newDriver);
 
     // Sync app config that API layer interceptors listen to
-    localStorage.setItem(
+    safeStorage.setJSON(
       'torrenta_app_config',
-      JSON.stringify({ url: newUrl, username: newUser })
+      { url: newUrl, username: newUser }
     );
   }
 
   function setTheme(newTheme: string) {
     theme.value = newTheme;
-    localStorage.setItem('torrenta_theme', newTheme);
+    safeStorage.setItem('torrenta_theme', newTheme);
     // Apply dataset attribute to root html for DaisyUI theme toggle
     document.documentElement.setAttribute('data-theme', newTheme);
   }
 
   function setLocale(newLocale: 'zh' | 'en') {
     locale.value = newLocale;
-    localStorage.setItem('torrenta_locale', newLocale);
+    safeStorage.setItem('torrenta_locale', newLocale);
   }
 
   function addCategory(name: string) {
@@ -91,12 +92,12 @@ export const useAppStore = defineStore('appStore', () => {
   }
 
   function saveCategoryConfigs() {
-    localStorage.setItem('torrenta_category_configs', JSON.stringify(categoryConfigs.value));
+    safeStorage.setJSON('torrenta_category_configs', categoryConfigs.value);
   }
 
   function setSimulationMode(enabled: boolean) {
     simulationMode.value = enabled;
-    localStorage.setItem('torrenta_simulation_mode', String(enabled));
+    safeStorage.setItem('torrenta_simulation_mode', String(enabled));
     if (!enabled) {
       // Clean up mock categories that have no custom paths
       const mockCats = ['Movies', 'Music', 'Software', 'Books'];
@@ -109,7 +110,7 @@ export const useAppStore = defineStore('appStore', () => {
 
   function setSimulatedCount(count: number) {
     simulatedCount.value = count;
-    localStorage.setItem('torrenta_simulated_count', String(count));
+    safeStorage.setItem('torrenta_simulated_count', String(count));
   }
 
   // Initialize theme on mount

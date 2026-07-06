@@ -3,13 +3,13 @@
     <!-- Connection Offline Warning Banner -->
     <div 
       v-if="!torrentStore.isConnected" 
-      class="alert alert-error shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold"
+      class="alert alert-error bg-error/10 border border-error/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold animate-fadeIn"
     >
-      <div class="flex items-center gap-3">
-        <AlertTriangleIcon class="h-6 w-6 text-error shrink-0 animate-pulse" />
+      <div class="flex items-center gap-3 text-left">
+        <AlertTriangleIcon class="h-5 w-5 text-error shrink-0 animate-pulse" />
         <div class="leading-snug">
-          <span class="font-bold text-error block mb-0.5">{{ t('dashboard.telemetryOffline') }}</span>
-          <span class="opacity-80">{{ t('dashboard.configureToReconnect') }}</span>
+          <span class="font-black text-error block mb-0.5 text-sm">{{ t('dashboard.telemetryOffline') }}</span>
+          <span class="opacity-80 font-normal text-xs text-base-content">{{ t('dashboard.configureToReconnect') }}</span>
         </div>
       </div>
       <a href="#/settings" class="btn btn-error btn-sm rounded-xl px-4 shadow-lg shadow-error/25 font-bold shrink-0">
@@ -965,7 +965,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useTorrentStore } from '@/stores/torrent';
 import { useI18n } from '@/i18n/useI18n';
@@ -1027,6 +1027,13 @@ watch(selectedDetailTorrent, (newVal) => {
     };
     fetchProps();
     detailsPollIntervalId = setInterval(fetchProps, 2000);
+  }
+});
+
+onUnmounted(() => {
+  if (detailsPollIntervalId) {
+    clearInterval(detailsPollIntervalId);
+    detailsPollIntervalId = null;
   }
 });
 
@@ -1445,18 +1452,19 @@ async function confirmDelete() {
 // Format space bytes human readable
 function formatSize(bytes: number): string {
   if (bytes === 0) return '0 B';
-  if (bytes < 0) return t('common.unknown');
+  if (bytes < 0 || !isFinite(bytes) || isNaN(bytes)) return t('common.unknown');
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 function formatSpeed(bytesPerSec: number): string {
   if (bytesPerSec === 0) return '0 B/s';
+  if (bytesPerSec < 0 || !isFinite(bytesPerSec) || isNaN(bytesPerSec)) return t('common.unknown');
   const k = 1024;
   const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
-  const i = Math.floor(Math.log(bytesPerSec) / Math.log(k));
+  const i = Math.min(Math.floor(Math.log(bytesPerSec) / Math.log(k)), sizes.length - 1);
   return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 

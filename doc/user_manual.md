@@ -27,8 +27,8 @@ Deploying Torrenta as a Docker container is the simplest and most robust setup. 
 ### 📝 Step-by-Step Guide
 1. Open [docker-compose.yml](../docker-compose.yml).
 2. Configure the environment variables:
-   - **`QBITTORRENT_URL`**: The address Torrenta uses to contact qBittorrent in the background (e.g. `http://host.docker.internal:8081` on same host, or `http://qbittorrent:8080` if on the same Docker bridge network).
-   - **`QBITTORRENT_HOST`**: The Host header qBittorrent expects. It must match the actual address and port of your qBittorrent instance (e.g. `localhost:8081` or `127.0.0.1:8081`) to satisfy qBittorrent's **Host Header Validation**.
+   - **`QBITTORRENT_URL`**: The address Torrenta uses to contact qBittorrent in the background (e.g. `http://host.docker.internal:8080` on same host, or `http://qbittorrent:8080` if on the same Docker bridge network; where `8080` should be replaced with your actual qBittorrent WebUI port).
+   - **`QBITTORRENT_HOST`**: The Host header qBittorrent expects. It must match the actual address and port of your qBittorrent instance (e.g. `localhost:8080` or `127.0.0.1:8080`; where `8080` should be replaced with your actual qBittorrent WebUI port) to satisfy qBittorrent's **Host Header Validation**.
    - **`QBITTORRENT_USER`** (Optional): Your qBittorrent WebUI login username. If provided, the web application will automatically log in on startup.
    - **`QBITTORRENT_PASS`** (Optional): Your qBittorrent WebUI login password. If provided, the web application will automatically log in on startup.
 3. Launch the container:

@@ -47,8 +47,8 @@
 docker run -d \
   --name torrenta \
   -p 3000:80 \
-  -e QBITTORRENT_URL=http://your-qbittorrent-ip:8081 \
-  -e QBITTORRENT_HOST=your-qbittorrent-ip:8081 \
+  -e QBITTORRENT_URL=http://<您的qBittorrent-IP>:<您的qBittorrent端口，默认8080> \
+  -e QBITTORRENT_HOST=<您的qBittorrent-IP>:<您的qBittorrent端口，默认8080> \
   --restart unless-stopped \
   fulcoo/torrenta:latest
 ```
@@ -58,8 +58,8 @@ docker run -d \
 2. 项目中内置的 [docker-compose.yml](docker-compose.yml) 已经默认配置为拉取官方镜像 `fulcoo/torrenta:latest`。编辑该文件配置环境变量：
    ```yaml
    environment:
-     - QBITTORRENT_URL=http://host.docker.internal:8081  # qBittorrent 的 WebUI 访问地址
-     - QBITTORRENT_HOST=localhost:8081                  # qBittorrent 期待的主机标头 (Host)
+     QBITTORRENT_URL: "http://host.docker.internal:<您的qBittorrent端口，默认8080>"  # qBittorrent 的 WebUI 访问地址
+     QBITTORRENT_HOST: "localhost:<您的qBittorrent端口，默认8080>"                  # qBittorrent 期待的主机标头 (Host)
    ```
 3. 在终端中启动：
    ```bash

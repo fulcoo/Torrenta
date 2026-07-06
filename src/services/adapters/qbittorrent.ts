@@ -1,11 +1,12 @@
 import { api } from '../api';
 import type { DownloaderAdapter, AddTorrentOptions } from './interface';
 import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/torrent';
+import { safeStorage } from '@/utils/storage';
 
 export class QBittorrentAdapter implements DownloaderAdapter {
   async connect(url: string, username?: string, password?: string): Promise<boolean> {
     // Write configuration to localStorage immediately so that the api interceptor pick up the URL
-    localStorage.setItem('torrenta_app_config', JSON.stringify({ url, username }));
+    safeStorage.setJSON('torrenta_app_config', { url, username });
 
     try {
       if (username || password) {
@@ -34,31 +35,33 @@ export class QBittorrentAdapter implements DownloaderAdapter {
   async getTorrents(): Promise<UnifiedTorrent[]> {
     try {
       const response = await api.get<any[]>('/torrents/info');
-      if (!Array.isArray(response.data)) {
+      if (!response || !Array.isArray(response.data)) {
         return [];
       }
-      return response.data.map((t) => ({
-        id: t.hash,
-        name: t.name,
-        progress: (t.progress || 0) * 100, // qBittorrent returns progress as 0 to 1
-        size: t.size || 0,
-        downloadSpeed: t.dlspeed || 0,
-        uploadSpeed: t.upspeed || 0,
-        status: this.mapStatus(t.state),
-        eta: t.eta || 0,
-        category: t.category || '',
-        ratio: t.ratio || 0,
-        num_seeds: t.num_seeds || 0,
-        num_seeds_total: t.num_complete || 0,
-        num_peers: t.num_leechs || 0,
-        num_peers_total: t.num_incomplete || 0,
-        uploaded: t.uploaded || 0,
-        tracker: t.tracker || '',
-        added_on: t.added_on || 0,
-        completion_on: t.completion_on || 0,
-        savepath: t.save_path || '',
-        tags: t.tags ? t.tags.split(',').map((tag: any) => tag.trim()).filter(Boolean) : [],
-      }));
+      return response.data
+        .filter((t) => t && typeof t === 'object')
+        .map((t) => ({
+          id: t.hash,
+          name: t.name,
+          progress: (t.progress || 0) * 100, // qBittorrent returns progress as 0 to 1
+          size: t.size || 0,
+          downloadSpeed: t.dlspeed || 0,
+          uploadSpeed: t.upspeed || 0,
+          status: this.mapStatus(t.state),
+          eta: t.eta || 0,
+          category: t.category || '',
+          ratio: t.ratio || 0,
+          num_seeds: t.num_seeds || 0,
+          num_seeds_total: t.num_complete || 0,
+          num_peers: t.num_leechs || 0,
+          num_peers_total: t.num_incomplete || 0,
+          uploaded: t.uploaded || 0,
+          tracker: t.tracker || '',
+          added_on: t.added_on || 0,
+          completion_on: t.completion_on || 0,
+          savepath: t.save_path || '',
+          tags: (t.tags && typeof t.tags === 'string') ? t.tags.split(',').map((tag: any) => tag.trim()).filter(Boolean) : [],
+        }));
     } catch (err) {
       console.error('Failed to get qBittorrent torrents:', err);
       return [];
@@ -69,8 +72,8 @@ export class QBittorrentAdapter implements DownloaderAdapter {
     try {
       // sync/maindata contains comprehensive info including free_space_on_disk
       const res = await api.get('/sync/maindata?rid=0');
-      const state = res.data.server_state || {};
-      const torrents = res.data.torrents || {};
+      const state = res.data?.server_state || {};
+      const torrents = res.data?.torrents || {};
       const fallbackCount = Object.keys(torrents).length;
 
       return {
@@ -85,13 +88,23 @@ export class QBittorrentAdapter implements DownloaderAdapter {
     } catch (err) {
       console.warn('sync/maindata failed, falling back to transfer/info:', err);
       // Fallback to transfer/info if sync/maindata is restricted or blocked
-      const res = await api.get('/transfer/info');
-      return {
-        globalDownloadSpeed: res.data.dl_info_speed || 0,
-        globalUploadSpeed: res.data.up_info_speed || 0,
-        freeSpaceOnDisk: 0,
-        allTorrentsCount: 0,
-      };
+      try {
+        const res = await api.get('/transfer/info');
+        return {
+          globalDownloadSpeed: res.data?.dl_info_speed || 0,
+          globalUploadSpeed: res.data?.up_info_speed || 0,
+          freeSpaceOnDisk: 0,
+          allTorrentsCount: 0,
+        };
+      } catch (fallbackErr) {
+        console.error('Fallback /transfer/info failed:', fallbackErr);
+        return {
+          globalDownloadSpeed: 0,
+          globalUploadSpeed: 0,
+          freeSpaceOnDisk: 0,
+          allTorrentsCount: 0,
+        };
+      }
     }
   }
 
