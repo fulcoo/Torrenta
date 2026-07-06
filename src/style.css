@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  /* Dynamic HSL glow effects using DaisyUI variables */
+  .glow-primary {
+    box-shadow: 0 0 15px hsla(var(--p), 0.5);
+  }
+  .glow-secondary {
+    box-shadow: 0 0 15px hsla(var(--s), 0.5);
+  }
+  .glow-accent {
+    box-shadow: 0 0 15px hsla(var(--a), 0.5);
+  }
+  .glow-success {
+    box-shadow: 0 0 15px hsla(var(--su), 0.5);
+  }
+  .glow-info {
+    box-shadow: 0 0 15px hsla(var(--in), 0.5);
+  }
+  
+  /* Glassmorphism custom styling */
+  .glassmorphic {
+    background: hsla(var(--b1), 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsla(var(--bc), 0.1);
+  }
+  
+  .glassmorphic-sidebar {
+    background: hsla(var(--b2), 0.75);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid hsla(var(--bc), 0.08);
+  }
+}
+
+/* Custom transitions and scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsla(var(--bc), 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsla(var(--bc), 0.3);
+}
+
+body {
+  overflow-x: hidden;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Custom global animations */
+@keyframes slideRight {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slideRight {
+  animation: slideRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
