@@ -20,7 +20,7 @@
 ### ⚙️ 配置文件说明
 - **`Dockerfile`**：多阶段构建文件。先在 Node 容器中编译 Vue 3 前端，然后将其拷贝到极速的 Nginx 容器中。
 - **`nginx.conf.template`**：Nginx 反向代理配置模板。会自动读取环境变量，代理 `/api/v2/` 路径至 qBittorrent，并自动改写 Origin/Referer 以伪装成 qBittorrent 本地请求。
-- **`docker-compose.yml`**：用于一键部署的 Compose 模板。
+- **`docker-compose.yml`**：用于一键部署的 Compose 模板。其中，**服务端口配置** 位于 `ports` 字段（默认为 `3000:80`，指将宿主机的 `3000` 端口映射到容器的 `80` 端口。如果您需要更改访问端口，只需将 `3000` 修改为宿主机的其他空闲端口即可，冒号后的 `80` 请保持不变）。
 
 ### 📝 部署步骤
 1. 打开 [docker-compose.yml](../docker-compose.yml)。

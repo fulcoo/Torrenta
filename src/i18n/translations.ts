@@ -244,6 +244,9 @@ export const translations: Record<string, any> = {
       showSection: '显示',
       hideSection: '隐藏',
       alwaysVisible: '始终可见',
+      notConnectedWarningTitle: '下载器未连接',
+      notConnectedWarningDesc: '当前未成功连接到 qBittorrent。点击此处或右侧按钮前往配置连接参数。',
+      goToConnectionSettings: '前往连接设置',
     }
   },
   en: {
@@ -491,6 +494,9 @@ export const translations: Record<string, any> = {
       showSection: 'Show',
       hideSection: 'Hide',
       alwaysVisible: 'Always Visible',
+      notConnectedWarningTitle: 'Downloader Disconnected',
+      notConnectedWarningDesc: 'Currently not connected to qBittorrent. Click here or the button to configure connection settings.',
+      goToConnectionSettings: 'Configure Connection',
     }
   }
 };

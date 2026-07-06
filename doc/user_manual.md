@@ -22,7 +22,7 @@ Deploying Torrenta as a Docker container is the simplest and most robust setup. 
 ### ⚙️ Configuration Variables
 - **`Dockerfile`**: A multi-stage build that compiles Vue 3 static assets and copies them into a high-performance Nginx Alpine container.
 - **`nginx.conf.template`**: Nginx configuration template. It dynamically injects environment variables, proxies `/api/v2/` requests to qBittorrent, and rewrites Origin/Referer/Host headers to match qBittorrent's local expectations.
-- **`docker-compose.yml`**: Compose file for one-command startup.
+- **`docker-compose.yml`**: Compose file for one-command startup. Note that the **web port configuration** is located under the `ports` field (defaults to `3000:80`, which maps host port `3000` to container port `80`. If you wish to change the access port, simply modify `3000` to any vacant port on your host, leaving the `:80` container port unchanged).
 
 ### 📝 Step-by-Step Guide
 1. Open [docker-compose.yml](../docker-compose.yml).
