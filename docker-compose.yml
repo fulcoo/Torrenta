@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Torrenta Premium WebUI (Nginx with Reverse Proxy)
+  torrenta:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: torrenta
+    environment:
+      # --- CONFIGURATION ---
+      # QBITTORRENT_URL: The address Torrenta's container uses to contact qBittorrent in the background
+      - QBITTORRENT_URL=http://host.docker.internal:8081
+      # QBITTORRENT_HOST: The hostname:port qBittorrent expects in the Host header (usually localhost:<port> or 127.0.0.1:<port>)
+      - QBITTORRENT_HOST=localhost:8081
+      # ---------------------
+    ports:
+      - 3000:80 # Access Torrenta UI at http://localhost:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Resolves host machine's localhost/IP from within the container
+    restart: unless-stopped
+
+    # If your existing qBittorrent is in a Docker container on this host, 
+    # uncomment the network section below and configure the external network name.
+    # networks:
+    #   - qbt_network
+
+# networks:
+#   qbt_network:
+#     external: true
+

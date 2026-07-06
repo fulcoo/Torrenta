@@ -1,0 +1,35 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name localhost;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Proxy the qBittorrent HTTP API requests
+    location /api/v2/ {
+        proxy_pass ${QBITTORRENT_URL}/api/v2/;
+        proxy_http_version 1.1;
+        
+        # Headers to prevent Host Header Validation and CSRF issues in qBittorrent
+        proxy_set_header Host ${QBITTORRENT_HOST};
+        proxy_set_header Referer http://${QBITTORRENT_HOST}/;
+        proxy_set_header Origin http://${QBITTORRENT_HOST};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # WebSocket support
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Disable buffering to ensure real-time stream delivery
+        proxy_buffering off;
+        
+        # Adjust body size limits to allow uploading large torrent files
+        client_max_body_size 100M;
+    }
+}

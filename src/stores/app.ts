@@ -21,7 +21,7 @@ export const useAppStore = defineStore('appStore', () => {
   const categoryConfigs = ref<CategoryConfig[]>(
     JSON.parse(localStorage.getItem('torrenta_category_configs') || '[]')
   );
-  const simulationMode = ref(localStorage.getItem('torrenta_simulation_mode') === 'true');
+  const simulationMode = ref(import.meta.env.DEV && localStorage.getItem('torrenta_simulation_mode') === 'true');
   const simulatedCount = ref(parseInt(localStorage.getItem('torrenta_simulated_count') || '12', 10));
   const showMobileSidebar = ref(false);
 

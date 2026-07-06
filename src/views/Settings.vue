@@ -71,6 +71,7 @@
             <RadioIcon class="h-4 w-4" /> {{ t('settings.tabConnection') }}
           </button>
           <button
+            v-if="isDev"
             type="button"
             @click="selectTab('simulation')"
             class="btn btn-sm justify-start gap-2.5 rounded-xl font-bold w-full border-none shadow-none text-left h-10 animate-fadeIn"
@@ -527,7 +528,7 @@
 
 
         <!-- 4. Simulation Panel -->
-        <div v-if="activeTab === 'simulation'" class="flex flex-col gap-6 animate-fadeIn">
+        <div v-if="activeTab === 'simulation' && isDev" class="flex flex-col gap-6 animate-fadeIn">
           <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left">
             <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
               <CpuIcon class="h-5 w-5 text-primary" /> {{ t('settings.simulationTitle') }}
@@ -638,6 +639,7 @@ import {
 const appStore = useAppStore();
 const torrentStore = useTorrentStore();
 const { t } = useI18n();
+const isDev = import.meta.env.DEV;
 
 const driverOptions = [
   { value: 'qbittorrent', label: 'qBittorrent (HTTP API v2)' },
@@ -655,8 +657,8 @@ function getInitialTab(): 'general' | 'download' | 'connection' | 'simulation' {
   if (queryStart !== -1) {
     const params = new URLSearchParams(hash.slice(queryStart + 1));
     const tab = params.get('tab');
-    if (tab === 'download' || tab === 'connection' || tab === 'simulation' || tab === 'general') {
-      return tab;
+    if (tab === 'download' || tab === 'connection' || (tab === 'simulation' && isDev) || tab === 'general') {
+      return tab as any;
     }
   }
   return 'general';
@@ -666,7 +668,11 @@ const activeTab = ref<'general' | 'download' | 'connection' | 'simulation'>(getI
 const showMobileMenu = ref(false);
 
 function selectTab(tab: 'general' | 'download' | 'connection' | 'simulation') {
-  activeTab.value = tab;
+  if (tab === 'simulation' && !isDev) {
+    activeTab.value = 'general';
+  } else {
+    activeTab.value = tab;
+  }
   showMobileMenu.value = false;
 }
 
@@ -855,8 +861,10 @@ function saveSettings() {
   // Reboot store loop
   torrentStore.bootClient().then(() => {
     torrentStore.triggerSyncLoop();
+    alert(t('settings.saveSuccess'));
   }).catch((e) => {
     console.error('Reboot loop failed with config save', e);
+    alert(t('settings.saveError') + (e.message || e));
   });
 }
 

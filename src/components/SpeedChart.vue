@@ -7,7 +7,7 @@
         <div class="flex items-center gap-2">
           <div class="h-2 w-2 rounded-full bg-primary glow-primary"></div>
           <div>
-            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">Global DL</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalDl') }}</div>
             <div class="text-sm font-extrabold font-mono text-primary">
               {{ formatSpeed(torrentStore.globalState?.globalDownloadSpeed || 0) }}
             </div>
@@ -18,7 +18,7 @@
         <div class="flex items-center gap-2">
           <div class="h-2 w-2 rounded-full bg-secondary glow-secondary"></div>
           <div>
-            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">Global UL</div>
+            <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalUl') }}</div>
             <div class="text-sm font-extrabold font-mono text-secondary">
               {{ formatSpeed(torrentStore.globalState?.globalUploadSpeed || 0) }}
             </div>
@@ -28,7 +28,7 @@
 
       <!-- Max Scale Indicator -->
       <div class="text-[10px] font-mono opacity-50 text-right">
-        Max scale: {{ formatSpeed(maxSpeed) }}
+        {{ t('dashboard.speedChart.maxScale', { speed: formatSpeed(maxSpeed) }) }}
       </div>
     </div>
 
@@ -100,8 +100,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useTorrentStore } from '@/stores/torrent';
+import { useI18n } from '@/i18n/useI18n';
 
 const torrentStore = useTorrentStore();
+const { t } = useI18n();
 const pointsCount = 30;
 
 // Track history array

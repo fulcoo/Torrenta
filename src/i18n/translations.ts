@@ -107,6 +107,11 @@ export const translations: Record<string, any> = {
         jumpTo: '跳转至',
         pageUnit: '页',
         go: '确定',
+      },
+      speedChart: {
+        globalDl: '全局下行',
+        globalUl: '全局上行',
+        maxScale: '最大量程: {speed}',
       }
     },
     torrent: {
@@ -230,6 +235,8 @@ export const translations: Record<string, any> = {
       passwordsNotMatch: '新密码与确认密码不一致',
       credentialsChanged: '修改成功！已更新本地配置并重新连接。',
       credentialsChangeFailed: '修改失败，请检查密码强度或日志，并确保当前处于连接状态。',
+      saveSuccess: '设置已成功保存！',
+      saveError: '保存设置失败：',
       sidebarCustomization: '侧边栏过滤器配置',
       sidebarCustomizationDesc: '调整侧边栏过滤器的显示顺序和可见性（“状态”是核心过滤器，不支持隐藏）。',
       moveUp: '上移',
@@ -347,6 +354,11 @@ export const translations: Record<string, any> = {
         jumpTo: 'Go to',
         pageUnit: 'page',
         go: 'Go',
+      },
+      speedChart: {
+        globalDl: 'Global DL',
+        globalUl: 'Global UL',
+        maxScale: 'Max scale: {speed}',
       }
     },
     torrent: {
@@ -468,9 +480,11 @@ export const translations: Record<string, any> = {
       confirmPassword: 'Confirm Password',
       btnChange: 'Change Credentials',
       passwordsNotMatch: 'New password and confirm password do not match',
-      credentialsChanged: 'Credentials updated successfully! Local configurations synchronized.',
-      credentialsChangeFailed: 'Failed to update credentials. Please check settings, connection state or server logs.',
-      sidebarCustomization: 'Sidebar Customization',
+      credentialsChanged: 'Password changed successfully! Local config updated and reconnected.',
+      credentialsChangeFailed: 'Failed to change credentials. Please check password strength and connection status.',
+      saveSuccess: 'Settings saved successfully!',
+      saveError: 'Failed to save settings: ',
+      sidebarCustomization: 'Sidebar Filters Customization',
       sidebarCustomizationDesc: 'Adjust the display order and visibility of the sidebar filters ("Status" cannot be hidden).',
       moveUp: 'Move Up',
       moveDown: 'Move Down',

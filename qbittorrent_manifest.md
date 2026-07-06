@@ -8,13 +8,13 @@
 
 项目通过适配器模式对底层下载器进行了封装和解耦。
 
-* **适配器接口**: 所有的下载控制器遵循 [DownloaderAdapter](file:///d:/Project/VUE/Torrenta/src/services/adapters/interface.ts) 规范。
-* **qBittorrent 适配器**: [QBittorrentAdapter](file:///d:/Project/VUE/Torrenta/src/services/adapters/qbittorrent.ts) 实现了 API 连接与数据映射，主要负责拼装符合 qBittorrent Web API v2 的 HTTP 请求。
+* **适配器接口**: 所有的下载控制器遵循 [DownloaderAdapter](src/services/adapters/interface.ts) 规范。
+* **qBittorrent 适配器**: [QBittorrentAdapter](src/services/adapters/qbittorrent.ts) 实现了 API 连接与数据映射，主要负责拼装符合 qBittorrent Web API v2 的 HTTP 请求。
 * **拦截器与会话**:
-  * [api.ts](file:///d:/Project/VUE/Torrenta/src/services/api.ts) 配置了 `withCredentials: true`。由于 qBittorrent 使用 Cookie Session 鉴权（`SID`），客户端请求必须携带凭证。
+  * [api.ts](src/services/api.ts) 配置了 `withCredentials: true`。由于 qBittorrent 使用 Cookie Session 鉴权（`SID`），客户端请求必须携带凭证。
   * 请求拦截器动态地将 `localStorage` 中的 WebUI 地址转换并拼接为 `/api/v2`。
 * **数据轮询**: 
-  * [torrent.ts](file:///d:/Project/VUE/Torrenta/src/stores/torrent.ts) 启动一个递归轮询机制（默认间隔 1500ms），在连接正常的情况下，并发拉取种子列表和系统整体指标。
+  * [torrent.ts](src/stores/torrent.ts) 启动一个递归轮询机制（默认间隔 1500ms），在连接正常的情况下，并发拉取种子列表和系统整体指标。
 
 ### 涉及的 qBittorrent Web API 接口
 * **鉴权**: POST `/api/v2/auth/login` (使用 `x-www-form-urlencoded` 传递用户名和密码)。
@@ -56,7 +56,7 @@
   * 支持设置各种可选的高级下载参数：配置下载保存路径 (`savepath`)、分类目录 (`category`)、是否启动时暂停 (`paused`)、是否跳过哈希校验 (`skip_checking`)、是否顺序下载 (`sequentialDownload`)、以及是否优先下载首尾文件块 (`firstLastAsStream`)。
 
 ### 2.2 监控与统计 (Telemetry & Stats)
-* **实时全局上传与下载速度**: 通过顶栏及趋势波形图（[SpeedChart](file:///d:/Project/VUE/Torrenta/src/components/SpeedChart.vue)）展示瞬时传输效率。
+* **实时全局上传与下载速度**: 通过顶栏及趋势波形图（[SpeedChart](src/components/SpeedChart.vue)）展示瞬时传输效率。
 * **磁盘空间监控**: 实时显示当前下载路径所在磁盘的剩余空间。
 * **活跃种子总数**: 监控当前在下载器中的种子总量。
 
@@ -76,7 +76,7 @@
 ## 3. 设置项清单
 
 ### 3.1 客户端侧边菜单布局 (Store / LocalStorage)
-设置页面采用侧边菜单进行分类聚合（由 [Settings.vue](file:///d:/Project/VUE/Torrenta/src/views/Settings.vue) 渲染，[app.ts](file:///d:/Project/VUE/Torrenta/src/stores/app.ts) 管理）：
+设置页面采用侧边菜单进行分类聚合（由 [Settings.vue](src/views/Settings.vue) 渲染，[app.ts](src/stores/app.ts) 管理）：
 
 * **Connection (连接设置)**:
   * **Downloader Client Type (下载器类型)**: 目前支持 `qbittorrent`，未来规划支持 `transmission` 和 `aria2`。
