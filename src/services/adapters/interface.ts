@@ -10,6 +10,7 @@ export interface AddTorrentOptions {
   autoTMM?: boolean;
   sequentialDownload?: boolean;
   firstLastAsStream?: boolean;
+  addToTopOfQueue?: boolean;
 }
 
 export interface DownloaderAdapter {

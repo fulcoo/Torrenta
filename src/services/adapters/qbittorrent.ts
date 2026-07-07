@@ -220,6 +220,9 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       if (options.firstLastAsStream !== undefined) {
         formData.append('firstLastAsStream', options.firstLastAsStream ? 'true' : 'false');
       }
+      if (options.addToTopOfQueue !== undefined) {
+        formData.append('addToTopOfQueue', options.addToTopOfQueue ? 'true' : 'false');
+      }
 
       await api.post('/torrents/add', formData, {
         headers: {

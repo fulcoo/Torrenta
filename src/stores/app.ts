@@ -25,6 +25,8 @@ export const useAppStore = defineStore('appStore', () => {
   const simulationMode = ref(import.meta.env.DEV && safeStorage.getItem('torrenta_simulation_mode') === 'true');
   const simulatedCount = ref(parseInt(safeStorage.getItem('torrenta_simulated_count') || '12', 10));
   const showMobileSidebar = ref(false);
+  const addToTopOfQueue = ref(safeStorage.getItem('torrenta_add_to_top_of_queue') === 'true');
+  const doNotStart = ref(safeStorage.getItem('torrenta_do_not_start') === 'true');
 
   function saveConfig(
     newUrl: string,
@@ -113,6 +115,16 @@ export const useAppStore = defineStore('appStore', () => {
     safeStorage.setItem('torrenta_simulated_count', String(count));
   }
 
+  function setAddToTopOfQueue(val: boolean) {
+    addToTopOfQueue.value = val;
+    safeStorage.setItem('torrenta_add_to_top_of_queue', String(val));
+  }
+
+  function setDoNotStart(val: boolean) {
+    doNotStart.value = val;
+    safeStorage.setItem('torrenta_do_not_start', String(val));
+  }
+
   // Initialize theme on mount
   setTheme(theme.value);
 
@@ -145,5 +157,9 @@ export const useAppStore = defineStore('appStore', () => {
     removeCategory,
     addPathToCategory,
     removePathFromCategory,
+    addToTopOfQueue,
+    doNotStart,
+    setAddToTopOfQueue,
+    setDoNotStart,
   };
 });

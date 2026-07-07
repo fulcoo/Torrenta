@@ -34,6 +34,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   const pendingStates = new Map<string, { status: UnifiedTorrent['status']; timestamp: number }>();
 
   const simulatedTorrents = ref<UnifiedTorrent[]>([]);
+  const downloadQueue = ref<string[]>(safeStorage.getJSON('torrenta_download_queue', []));
 
   const simulatedTrackersMap = ref<Record<string, { url: string; tier: number }[]>>(
     safeStorage.getJSON('torrenta_simulated_trackers', {})
@@ -53,6 +54,76 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     { name: 'Debian NetInst v12 x86_64 installer.iso', category: 'Software', status: 'queued', size: 419430400, initialProgress: 0 },
     { name: 'Corrupted Download File Sample.zip', category: '', status: 'error', size: 1073741824, initialProgress: 42.1 },
   ];
+
+  function updateQueueStatus() {
+    if (!appStore.simulationMode) return;
+
+    // Get all simulated torrents that are not finished (progress < 100) and not paused/error/checking
+    const activeTorrents = simulatedTorrents.value.filter(
+      (t) => t.progress < 100 && t.status !== 'paused' && t.status !== 'error' && t.status !== 'checking'
+    );
+
+    // Sync downloadQueue: remove deleted torrents, add missing torrents
+    const activeIds = new Set(activeTorrents.map((t) => t.id));
+    
+    // Clean queue of ids that don't exist anymore or are completed
+    let currentQueue = downloadQueue.value.filter((id) => activeIds.has(id));
+
+    // Add any missing active ids to the queue (bottom)
+    activeTorrents.forEach((t) => {
+      if (!currentQueue.includes(t.id)) {
+        currentQueue.push(t.id);
+      }
+    });
+
+    downloadQueue.value = currentQueue;
+    safeStorage.setJSON('torrenta_download_queue', currentQueue);
+
+    // Limit to 2 concurrent downloads
+    const maxDownloads = 2;
+
+    simulatedTorrents.value = simulatedTorrents.value.map((t) => {
+      if (t.progress >= 100) {
+        if (t.status === 'downloading' || t.status === 'queued') {
+          return {
+            ...t,
+            status: 'seeding',
+            downloadSpeed: 0,
+            uploadSpeed: Math.floor((Math.random() * 5 + 1) * 1024 * 1024),
+            eta: 0,
+          };
+        }
+        return t;
+      }
+
+      if (t.status === 'paused' || t.status === 'error' || t.status === 'checking') {
+        return t;
+      }
+
+      // Now it's either downloading or queued
+      const queueIndex = currentQueue.indexOf(t.id);
+      if (queueIndex !== -1 && queueIndex < maxDownloads) {
+        // It is allowed to download!
+        const dlSpeed = t.downloadSpeed > 0 ? t.downloadSpeed : Math.floor((Math.random() * 15 + 5) * 1024 * 1024);
+        const ulSpeed = t.uploadSpeed > 0 ? t.uploadSpeed : Math.floor((Math.random() * 500 + 100) * 1024);
+        return {
+          ...t,
+          status: 'downloading',
+          downloadSpeed: dlSpeed,
+          uploadSpeed: ulSpeed,
+        };
+      } else {
+        // It must queue!
+        return {
+          ...t,
+          status: 'queued',
+          downloadSpeed: 0,
+          uploadSpeed: 0,
+          eta: 0,
+        };
+      }
+    });
+  }
 
   function resetSimulatedData() {
     const count = appStore.simulatedCount;
@@ -265,6 +336,9 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           if (simulatedTorrents.value.length === 0) {
             resetSimulatedData();
           }
+
+          // Sync simulation queue status before progress tick
+          updateQueueStatus();
 
           // Tick simulated torrents
           simulatedTorrents.value = simulatedTorrents.value.map((t) => {
@@ -518,6 +592,9 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   }
 
   async function addTorrents(options: AddTorrentOptions) {
+    const shouldPause = options.paused !== undefined ? options.paused : appStore.doNotStart;
+    const shouldAddToTop = options.addToTopOfQueue !== undefined ? options.addToTopOfQueue : appStore.addToTopOfQueue;
+
     if (appStore.simulationMode) {
       let torrentName = 'Added Torrent';
       if (options.files && options.files.length > 0) {
@@ -544,13 +621,22 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         name: `[Mock] ${torrentName}`,
         progress: 0,
         size,
-        downloadSpeed: options.paused ? 0 : Math.floor((Math.random() * 15 + 5) * 1024 * 1024),
-        uploadSpeed: options.paused ? 0 : Math.floor((Math.random() * 500 + 100) * 1024),
-        status: options.paused ? 'paused' : 'downloading',
-        eta: options.paused ? 0 : Math.floor(Math.random() * 3600 + 120),
+        downloadSpeed: shouldPause ? 0 : Math.floor((Math.random() * 15 + 5) * 1024 * 1024),
+        uploadSpeed: shouldPause ? 0 : Math.floor((Math.random() * 500 + 100) * 1024),
+        status: shouldPause ? 'paused' : 'downloading',
+        eta: shouldPause ? 0 : Math.floor(Math.random() * 3600 + 120),
         category: options.category || '',
         ratio: 0,
       };
+
+      if (!shouldPause) {
+        if (shouldAddToTop) {
+          downloadQueue.value.unshift(id);
+        } else {
+          downloadQueue.value.push(id);
+        }
+        safeStorage.setJSON('torrenta_download_queue', downloadQueue.value);
+      }
 
       simulatedTorrents.value.unshift(newTorrent);
       torrents.value = [...simulatedTorrents.value];
@@ -561,7 +647,12 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     }
 
     if (!driver) return false;
-    const success = await driver.addTorrents(options);
+    const finalOptions: AddTorrentOptions = {
+      ...options,
+      paused: shouldPause,
+      addToTopOfQueue: shouldAddToTop,
+    };
+    const success = await driver.addTorrents(finalOptions);
     if (success) {
       triggerSyncLoop();
     }
@@ -987,5 +1078,6 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     deleteTags,
     getTorrentTrackers,
     saveTorrentTrackers,
+    downloadQueue,
   };
 });

@@ -247,6 +247,12 @@ export const translations: Record<string, any> = {
       notConnectedWarningTitle: '下载器未连接',
       notConnectedWarningDesc: '当前未成功连接到 qBittorrent。点击此处或右侧按钮前往配置连接参数。',
       goToConnectionSettings: '前往连接设置',
+      whenAddingTorrent: '添加 torrent 时',
+      whenAddingTorrentDesc: '配置添加种子文件或链接时的默认行为和排队规则。',
+      addToTopOfQueue: '添加到队列顶部',
+      addToTopOfQueueDesc: '新添加的种子将优先排队，放置在下载队列的首位。',
+      doNotStart: '不要自动开始下载',
+      doNotStartDesc: '新添加的种子将处于已暂停状态，不会自动启动下载。',
     }
   },
   en: {
@@ -497,6 +503,12 @@ export const translations: Record<string, any> = {
       notConnectedWarningTitle: 'Downloader Disconnected',
       notConnectedWarningDesc: 'Currently not connected to qBittorrent. Click here or the button to configure connection settings.',
       goToConnectionSettings: 'Configure Connection',
+      whenAddingTorrent: 'When adding torrent',
+      whenAddingTorrentDesc: 'Configure default behaviors and queuing rules when adding new torrent files or links.',
+      addToTopOfQueue: 'Add to top of queue',
+      addToTopOfQueueDesc: 'Newly added torrents will be prioritized and placed at the top of the download queue.',
+      doNotStart: 'Do not start download automatically',
+      doNotStartDesc: 'Newly added torrents will be in a paused state and will not download automatically.',
     }
   }
 };

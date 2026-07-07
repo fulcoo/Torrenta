@@ -45,7 +45,7 @@
     </div>
 
     <!-- Layout Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
       <!-- Left Navigation Menu (Desktop persistent sidebar, Mobile drawer overlay) -->
       <aside
         class="md:col-span-1 transition-all duration-300 md:flex flex-col gap-2 bg-base-100/50 p-3 rounded-2xl border border-base-content/10"
@@ -53,7 +53,7 @@
         @click.self="showMobileMenu = false"
       >
         <div
-          class="w-72 max-w-[85%] md:w-full h-full md:h-auto bg-base-200 md:bg-transparent p-4 md:p-0 rounded-2xl border border-base-content/10 md:border-none flex flex-col gap-2 shadow-2xl md:shadow-none"
+          class="w-72 max-w-[85%] md:w-full md:max-w-none h-full md:h-auto bg-base-200 md:bg-transparent p-4 md:p-0 rounded-2xl border border-base-content/10 md:border-none flex flex-col gap-2 shadow-2xl md:shadow-none"
           :class="showMobileMenu ? 'animate-slideRight' : ''"
         >
           <!-- Mobile Drawer Header -->
@@ -101,118 +101,114 @@
       </aside>
 
       <!-- Right Content Panels -->
-      <main class="md:col-span-3 flex flex-col gap-6">
+      <main class="md:col-span-4 flex flex-col gap-6">
         <!-- 1. General Panel (Language first, Theme second) -->
-        <div v-if="activeTab === 'general'" class="flex flex-col gap-6 animate-fadeIn">
-          <!-- UI Language Switcher Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 animate-fadeIn relative z-20">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <LanguagesIcon class="h-5 w-5 text-primary" /> {{ t('settings.languageTitle') }}
-            </h2>
-
-            <div class="flex flex-col gap-3 text-left">
+        <div v-if="activeTab === 'general'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+          <!-- UI Language Switcher -->
+          <div class="relative z-20 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <LanguagesIcon class="h-5 w-5 text-primary" /> {{ t('settings.languageTitle') }}
+              </h2>
               <span class="text-xs opacity-60">{{ t('settings.languageDesc') }}</span>
-              
-              <div class="flex flex-col sm:flex-row items-center gap-4 mt-1">
-                <div class="relative w-full sm:max-w-xs">
-                  <CustomSelect 
-                    v-model="appStore.locale" 
-                    :options="[
-                      { value: 'zh', label: '简体中文 (Chinese)' },
-                      { value: 'en', label: 'English' }
-                    ]"
-                    @change="(val) => appStore.setLocale(val)"
-                  />
-                </div>
-              </div>
+            </div>
+
+            <div class="relative w-full sm:max-w-xs shrink-0">
+              <CustomSelect 
+                v-model="appStore.locale" 
+                :options="[
+                  { value: 'zh', label: '简体中文 (Chinese)' },
+                  { value: 'en', label: 'English' }
+                ]"
+                @change="(val) => appStore.setLocale(val)"
+              />
             </div>
           </div>
 
-          <!-- UI Theme Selector Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 relative z-10">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <PaletteIcon class="h-5 w-5 text-secondary" /> {{ t('settings.uiThemes') }}
-            </h2>
-
-            <div class="flex flex-col gap-3 text-left">
+          <!-- UI Theme Selector -->
+          <div class="relative z-10 text-left flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <PaletteIcon class="h-5 w-5 text-secondary" /> {{ t('settings.uiThemes') }}
+              </h2>
               <span class="text-xs opacity-60">{{ t('settings.themeDesc') }}</span>
-              
-              <div class="flex flex-col sm:flex-row items-center gap-4 mt-1">
-                <!-- Custom Styled Theme Dropdown (No Double Arrows) -->
-                <div class="relative w-full sm:max-w-xs" ref="dropdownContainer">
-                  <button 
-                    type="button"
-                    @click="toggleThemeDropdown"
-                    class="w-full bg-base-200 hover:bg-base-300/80 active:bg-base-300 border border-base-content/15 rounded-xl focus:outline-none flex items-center justify-between font-bold capitalize text-sm h-11 px-4 text-base-content text-left animate-fadeIn"
-                    :class="isDropdownOpen ? 'border-primary/50 ring-1 ring-primary/20 bg-base-300' : ''"
-                  >
-                    <span class="truncate">{{ appStore.theme }}</span>
-                    <ChevronDownIcon class="h-4 w-4 opacity-50 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': isDropdownOpen }" />
-                  </button>
+            </div>
 
-                  <div 
-                    v-if="isDropdownOpen" 
-                    ref="dropdownMenu"
-                    class="absolute left-0 right-0 top-full mt-1.5 z-50 p-1.5 bg-base-200 border border-base-content/15 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-full"
-                    style="--tw-bg-opacity: 1 !important; background-color: var(--b2) !important; background-color: hsl(var(--b2)) !important; background-color: oklch(var(--b2)) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important;"
-                  >
-                    <div class="flex flex-col gap-0.5">
-                      <button
-                        v-for="t in availableThemes"
-                        :key="t.name"
-                        type="button"
-                        @click="selectThemeOption(t.name)"
-                        class="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-base-content/10 transition-colors capitalize text-xs font-semibold text-left"
-                        :class="appStore.theme === t.name ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'border border-transparent'"
-                      >
-                        <span class="truncate">{{ t.name }}</span>
-                        <div class="flex items-center gap-1 shrink-0">
-                          <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.primary }"></span>
-                          <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.secondary }"></span>
-                          <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.accent }"></span>
-                          <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.neutral }"></span>
-                        </div>
-                      </button>
-                    </div>
+            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
+              <!-- Custom Styled Theme Dropdown (No Double Arrows) -->
+              <div class="relative w-full sm:w-44" ref="dropdownContainer">
+                <button 
+                  type="button"
+                  @click="toggleThemeDropdown"
+                  class="w-full bg-base-200 hover:bg-base-300/80 active:bg-base-300 border border-base-content/15 rounded-xl focus:outline-none flex items-center justify-between font-bold capitalize text-sm h-11 px-4 text-base-content text-left animate-fadeIn"
+                  :class="isDropdownOpen ? 'border-primary/50 ring-1 ring-primary/20 bg-base-300' : ''"
+                >
+                  <span class="truncate">{{ appStore.theme }}</span>
+                  <ChevronDownIcon class="h-4 w-4 opacity-50 shrink-0 transition-transform duration-200" :class="{ 'rotate-180': isDropdownOpen }" />
+                </button>
+
+                <div 
+                  v-if="isDropdownOpen" 
+                  ref="dropdownMenu"
+                  class="absolute left-0 right-0 top-full mt-1.5 z-50 p-1.5 bg-base-200 border border-base-content/15 rounded-xl shadow-2xl max-h-64 overflow-y-auto w-full"
+                  style="--tw-bg-opacity: 1 !important; background-color: var(--b2) !important; background-color: hsl(var(--b2)) !important; background-color: oklch(var(--b2)) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important;"
+                >
+                  <div class="flex flex-col gap-0.5">
+                    <button
+                      v-for="t in availableThemes"
+                      :key="t.name"
+                      type="button"
+                      @click="selectThemeOption(t.name)"
+                      class="w-full flex items-center justify-between py-2 px-3 rounded-lg hover:bg-base-content/10 transition-colors capitalize text-xs font-semibold text-left"
+                      :class="appStore.theme === t.name ? 'bg-secondary/10 text-secondary border border-secondary/20' : 'border border-transparent'"
+                    >
+                      <span class="truncate">{{ t.name }}</span>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.primary }"></span>
+                        <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.secondary }"></span>
+                        <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.accent }"></span>
+                        <span class="h-3 w-3 rounded-full border border-base-content/10" :style="{ backgroundColor: t.neutral }"></span>
+                      </div>
+                    </button>
                   </div>
                 </div>
+              </div>
 
-                <!-- Swatch of current active theme -->
-                <div class="flex items-center gap-3 bg-base-200/50 px-4 py-2.5 rounded-xl border border-base-content/10 select-none">
-                  <span class="text-xs font-semibold opacity-60">{{ t('settings.activeSwatch') }}</span>
-                  <div class="flex items-center gap-2">
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.primary }"></span>
-                      <span class="text-[8px] opacity-50 font-mono">Pri</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.secondary }"></span>
-                      <span class="text-[8px] opacity-50 font-mono">Sec</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.accent }"></span>
-                      <span class="text-[8px] opacity-50 font-mono">Acc</span>
-                    </div>
-                    <div class="flex flex-col items-center gap-0.5">
-                      <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.neutral }"></span>
-                      <span class="text-[8px] opacity-50 font-mono">Neu</span>
-                    </div>
+              <!-- Swatch of current active theme -->
+              <div class="flex items-center gap-3 bg-base-200/50 px-4 py-2.5 rounded-xl border border-base-content/10 select-none w-full sm:w-auto justify-center">
+                <span class="text-xs font-semibold opacity-60">{{ t('settings.activeSwatch') }}</span>
+                <div class="flex items-center gap-2">
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.primary }"></span>
+                    <span class="text-[8px] opacity-50 font-mono">Pri</span>
+                  </div>
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.secondary }"></span>
+                    <span class="text-[8px] opacity-50 font-mono">Sec</span>
+                  </div>
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.accent }"></span>
+                    <span class="text-[8px] opacity-50 font-mono">Acc</span>
+                  </div>
+                  <div class="flex flex-col items-center gap-0.5">
+                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.neutral }"></span>
+                    <span class="text-[8px] opacity-50 font-mono">Neu</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Sidebar Customization Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 relative z-0 mt-6 animate-fadeIn">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <SlidersIcon class="h-5 w-5 text-accent" /> {{ t('settings.sidebarCustomization') }}
-            </h2>
-
-            <div class="flex flex-col gap-3 text-left">
+          <!-- Sidebar Customization -->
+          <div class="relative z-0 text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <SlidersIcon class="h-5 w-5 text-accent" /> {{ t('settings.sidebarCustomization') }}
+              </h2>
               <span class="text-xs opacity-60">{{ t('settings.sidebarCustomizationDesc') }}</span>
-              
-              <div class="mt-2 border border-base-content/10 rounded-xl overflow-hidden divide-y divide-base-content/10 bg-base-200 w-full">
+            </div>
+
+            <div class="border border-base-content/10 rounded-xl overflow-hidden divide-y divide-base-content/10 bg-base-200 w-full">
                 <div 
                   v-for="(secId, index) in sectionsOrder" 
                   :key="secId" 
@@ -264,106 +260,147 @@
                 </div>
               </div>
             </div>
-          </div>
         </div>
 
-        <!-- 2. Download Panel (Category setup) -->
-        <div v-if="activeTab === 'download'" class="flex flex-col gap-6 animate-fadeIn">
-          <!-- Categories & Paths Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <FolderIcon class="h-5 w-5 text-primary" /> {{ t('settings.categoryPaths') }}
-            </h2>
+        <!-- 2. Download Panel -->
+        <div v-if="activeTab === 'download'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 animate-fadeIn flex flex-col gap-6">
+          <!-- When adding torrent settings -->
+          <div class="relative text-left flex flex-col gap-3 pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <DownloadIcon class="h-5 w-5 text-primary" /> {{ t('settings.whenAddingTorrent') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.whenAddingTorrentDesc') }}</span>
+            </div>
 
-            <div class="flex flex-col gap-4 text-left">
-              <!-- Add new category form -->
-              <div class="flex flex-col gap-1.5 p-3.5 bg-base-200/50 rounded-xl border border-base-content/5">
-                <span class="text-xs font-bold opacity-75 uppercase">{{ t('settings.createCategory') }}</span>
-                <div class="flex gap-2">
-                  <input
-                    v-model="newCategoryInput"
-                    type="text"
-                    :placeholder="t('settings.categoryPlaceholder')"
-                    class="input input-bordered input-sm flex-1 rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-9 px-3 border border-base-content/10"
-                    @keyup.enter="handleCreateCategory"
-                  />
-                  <button type="button" @click="handleCreateCategory" class="btn btn-primary btn-sm h-9 rounded-xl font-bold flex items-center gap-1">
-                    <PlusIcon class="h-4 w-4" /> {{ t('common.create') }}
-                  </button>
+            <div class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5">
+              <!-- Add to top of queue -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="appStore.addToTopOfQueue"
+                  @change="(e: any) => appStore.setAddToTopOfQueue(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.addToTopOfQueue') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.addToTopOfQueueDesc') }}</span>
                 </div>
-              </div>
+              </label>
 
-              <!-- List of Categories with their paths -->
-              <div v-if="appStore.categoryConfigs.length > 0" class="flex flex-col gap-4 mt-2">
-                <div
-                  v-for="cat in appStore.categoryConfigs"
-                  :key="cat.name"
-                  class="flex flex-col gap-3 p-4 bg-base-200/30 rounded-2xl border border-base-content/10"
-                >
-                  <!-- Category Header -->
-                  <div class="flex items-center justify-between border-b border-base-content/5 pb-2">
-                    <div class="flex items-center gap-2">
-                      <FolderOpenIcon class="h-5 w-5 text-secondary animate-pulse" />
-                      <span class="font-black text-sm tracking-wide">{{ cat.name }}</span>
-                    </div>
-                    <button type="button" @click="appStore.removeCategory(cat.name)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6" :title="t('settings.removeCategory')">
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Do not start download automatically -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="appStore.doNotStart"
+                  @change="(e: any) => appStore.setDoNotStart(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.doNotStart') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.doNotStartDesc') }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Category & Save Paths section -->
+          <div class="relative text-left flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <FolderIcon class="h-5 w-5 text-secondary" /> {{ t('settings.categoryPaths') }}
+                </h2>
+                <span class="text-xs opacity-60">管理下载分类以及各分类对应的多下载目录路径。</span>
+              </div>
+              <button 
+                type="button" 
+                @click="openCreateCategoryModal" 
+                class="btn btn-primary btn-sm btn-circle h-8 w-8 min-h-[32px] rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center" 
+                :title="t('settings.createCategory')"
+              >
+                <PlusIcon class="h-4 w-4" />
+              </button>
+            </div>
+
+            <!-- List of Categories with their paths -->
+            <div v-if="appStore.categoryConfigs.length > 0" class="flex flex-col gap-4 mt-1">
+              <div
+                v-for="cat in appStore.categoryConfigs"
+                :key="cat.name"
+                class="flex flex-col gap-3 p-4 bg-base-200/30 rounded-2xl border border-base-content/10"
+              >
+                <!-- Category Header -->
+                <div class="flex items-center justify-between border-b border-base-content/5 pb-2">
+                  <div class="flex items-center gap-2">
+                    <FolderOpenIcon class="h-5 w-5 text-secondary animate-pulse" />
+                    <span class="font-black text-sm tracking-wide">{{ cat.name }}</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button 
+                      type="button" 
+                      @click="openAddPathModal(cat.name)" 
+                      class="btn btn-ghost btn-xs btn-circle text-secondary hover:bg-secondary/15 h-6 w-6" 
+                      :title="t('settings.addPathBtn')"
+                    >
+                      <PlusIcon class="h-3.5 w-3.5" />
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="appStore.removeCategory(cat.name)" 
+                      class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6" 
+                      :title="t('settings.removeCategory')"
+                    >
                       <TrashIcon class="h-3.5 w-3.5" />
                     </button>
                   </div>
+                </div>
 
-                  <!-- Add path to this Category form -->
-                  <div class="flex gap-2 mt-1">
-                    <input
-                      v-model="categoryPathInputs[cat.name]"
-                      type="text"
-                      :placeholder="t('settings.addPathPlaceholder')"
-                      class="input input-bordered input-sm flex-1 rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-xs h-8 px-2 border border-base-content/10"
-                      @keyup.enter="handleAddPathToCategory(cat.name)"
-                    />
-                    <button type="button" @click="handleAddPathToCategory(cat.name)" class="btn btn-secondary btn-sm h-8 rounded-xl font-bold text-xs px-3">
-                      {{ t('settings.addPathBtn') }}
-                    </button>
+                <!-- Paths list for this category -->
+                <div class="flex flex-col gap-1.5 mt-0.5">
+                  <div v-if="cat.paths.length > 0" class="flex flex-col gap-1.5">
+                    <div
+                      v-for="path in cat.paths"
+                      :key="path"
+                      class="flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-lg border border-base-content/5 text-[11px] font-mono"
+                    >
+                      <span class="truncate pr-4">{{ path }}</span>
+                      <button type="button" @click="appStore.removePathFromCategory(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
+                        <XIcon class="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
-
-                  <!-- Paths list for this category -->
-                  <div class="flex flex-col gap-1.5 mt-1.5">
-                    <div v-if="cat.paths.length > 0" class="flex flex-col gap-1.5">
-                      <div
-                        v-for="path in cat.paths"
-                        :key="path"
-                        class="flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-lg border border-base-content/5 text-[11px] font-mono"
-                      >
-                        <span class="truncate pr-4">{{ path }}</span>
-                        <button type="button" @click="appStore.removePathFromCategory(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
-                          <XIcon class="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                    <div v-else class="text-[11px] opacity-40 text-center py-2 bg-base-200/10 rounded-xl border border-dashed border-base-content/5">
-                      {{ t('settings.noPaths') }}
-                    </div>
+                  <div v-else class="text-[11px] opacity-40 text-center py-2 bg-base-200/10 rounded-xl border border-dashed border-base-content/5">
+                    {{ t('settings.noPaths') }}
                   </div>
                 </div>
               </div>
-              <div v-else class="text-xs opacity-40 text-center py-8 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
-                {{ t('settings.noCategories') }}
-              </div>
+            </div>
+            <div v-else class="text-xs opacity-40 text-center py-8 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
+              {{ t('settings.noCategories') }}
             </div>
           </div>
         </div>
 
-        <!-- 2. Connection Panel -->
-        <div v-if="activeTab === 'connection'" class="flex flex-col gap-6 animate-fadeIn">
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <RadioIcon class="h-5 w-5 text-primary" /> {{ t('settings.connParams') }}
-            </h2>
+        <!-- 3. Connection Panel -->
+        <div v-if="activeTab === 'connection'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+          <!-- Connection Parameters -->
+          <div class="text-left flex flex-col gap-4">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <RadioIcon class="h-5 w-5 text-primary" /> {{ t('settings.connParams') }}
+              </h2>
+            </div>
 
             <div class="flex flex-col gap-4">
               <!-- Downloader Driver Type -->
-              <div class="form-control w-full">
-                <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.clientType') }}</label>
-                <CustomSelect v-model="form.driverType" :options="driverOptions" />
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.clientType') }}</span>
+                <div class="w-full sm:max-w-xs shrink-0">
+                  <CustomSelect v-model="form.driverType" :options="driverOptions" />
+                </div>
               </div>
 
               <!-- Endpoint URL -->
@@ -435,7 +472,7 @@
               </div>
 
               <!-- Warnings / Tips Inside Connection Parameters -->
-              <div class="divider my-2 before:bg-base-content/10 after:bg-base-content/10"></div>
+              <div class="h-px bg-base-content/10 my-2"></div>
               
               <div class="flex flex-col gap-3">
                 <!-- Standard WebUI Alert -->
@@ -471,15 +508,18 @@
             </div>
           </div>
 
-          <!-- Change Downloader WebUI Credentials Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left animate-fadeIn">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-              <KeyRoundIcon class="h-5 w-5 text-secondary animate-pulse" /> {{ t('settings.changeCredentialsTitle') }}
-            </h2>
+          <div class="h-px bg-base-content/10 w-full"></div>
 
-            <p class="text-xs opacity-60 mb-4 leading-relaxed">
-              {{ t('settings.changeCredentialsDesc') }}
-            </p>
+          <!-- Change Downloader WebUI Credentials -->
+          <div class="text-left flex flex-col gap-4">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <KeyRoundIcon class="h-5 w-5 text-secondary animate-pulse" /> {{ t('settings.changeCredentialsTitle') }}
+              </h2>
+              <p class="text-xs opacity-60 leading-relaxed">
+                {{ t('settings.changeCredentialsDesc') }}
+              </p>
+            </div>
 
             <form @submit.prevent="handleChangeCredentials" class="flex flex-col gap-4">
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -546,73 +586,121 @@
 
 
         <!-- 4. Simulation Panel -->
-        <div v-if="activeTab === 'simulation' && isDev" class="flex flex-col gap-6 animate-fadeIn">
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left">
-            <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+        <div v-if="activeTab === 'simulation' && isDev" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left animate-fadeIn flex flex-col gap-4">
+          <div class="flex flex-col gap-1">
+            <h2 class="text-base font-bold flex items-center gap-2">
               <CpuIcon class="h-5 w-5 text-primary" /> {{ t('settings.simulationTitle') }}
             </h2>
+            <p class="text-xs opacity-60 leading-relaxed">
+              {{ t('settings.simulationDesc') }}
+            </p>
+          </div>
 
-            <div class="flex flex-col gap-5">
-              <p class="text-xs opacity-60 leading-relaxed">
-                {{ t('settings.simulationDesc') }}
-              </p>
+          <div class="flex flex-col gap-5">
 
-              <!-- Enable Simulation Toggle -->
-              <div class="form-control bg-base-200/50 border border-base-content/5 p-4 rounded-xl flex flex-row items-center justify-between gap-4">
-                <div class="flex flex-col gap-0.5">
-                  <span class="text-sm font-bold">{{ t('settings.enableSimulation') }}</span>
-                  <span class="text-[10px] opacity-50">开启后接管数据拉取，展示各种虚拟状态的种子</span>
+            <!-- Enable Simulation Toggle -->
+            <div class="form-control bg-base-200/50 border border-base-content/5 p-4 rounded-xl flex flex-row items-center justify-between gap-4">
+              <div class="flex flex-col gap-0.5">
+                <span class="text-sm font-bold">{{ t('settings.enableSimulation') }}</span>
+                <span class="text-[10px] opacity-50">开启后接管数据拉取，展示各种虚拟状态的种子</span>
+              </div>
+              <input
+                type="checkbox"
+                class="toggle toggle-primary"
+                :checked="appStore.simulationMode"
+                @change="toggleSimulationMode"
+              />
+            </div>
+
+            <!-- Extra Simulation configs (e.g. simulatedCount slider/input) -->
+            <div v-if="appStore.simulationMode" class="flex flex-col gap-4 animate-fadeIn">
+              <!-- Mock Count -->
+              <div class="form-control bg-base-200/30 border border-base-content/5 p-4 rounded-xl flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold uppercase opacity-75">{{ t('settings.simulatedTorrentsCount') }}</span>
+                  <span class="text-sm font-mono font-black text-secondary">{{ appStore.simulatedCount }}</span>
                 </div>
                 <input
-                  type="checkbox"
-                  class="toggle toggle-primary"
-                  :checked="appStore.simulationMode"
-                  @change="toggleSimulationMode"
+                  type="range"
+                  min="4"
+                  max="40"
+                  step="1"
+                  :value="appStore.simulatedCount"
+                  class="range range-secondary range-xs"
+                  @input="handleSimulatedCountChange"
                 />
+                <div class="w-full flex justify-between text-[10px] px-1 font-mono opacity-50">
+                  <span>4</span>
+                  <span>12</span>
+                  <span>20</span>
+                  <span>30</span>
+                  <span>40</span>
+                </div>
               </div>
 
-              <!-- Extra Simulation configs (e.g. simulatedCount slider/input) -->
-              <div v-if="appStore.simulationMode" class="flex flex-col gap-4 animate-fadeIn">
-                <!-- Mock Count -->
-                <div class="form-control bg-base-200/30 border border-base-content/5 p-4 rounded-xl flex flex-col gap-2">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold uppercase opacity-75">{{ t('settings.simulatedTorrentsCount') }}</span>
-                    <span class="text-sm font-mono font-black text-secondary">{{ appStore.simulatedCount }}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="4"
-                    max="40"
-                    step="1"
-                    :value="appStore.simulatedCount"
-                    class="range range-secondary range-xs"
-                    @input="handleSimulatedCountChange"
-                  />
-                  <div class="w-full flex justify-between text-[10px] px-1 font-mono opacity-50">
-                    <span>4</span>
-                    <span>12</span>
-                    <span>20</span>
-                    <span>30</span>
-                    <span>40</span>
-                  </div>
-                </div>
-
-                <!-- Reset Data button -->
-                <div class="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    @click="handleRegenerateSimData"
-                    class="btn btn-neutral btn-sm rounded-xl font-bold flex items-center gap-1.5"
-                  >
-                    <SparklesIcon class="h-4 w-4 text-warning" />
-                    {{ t('settings.regenerateSimData') }}
-                  </button>
-                </div>
+              <!-- Reset Data button -->
+              <div class="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  @click="handleRegenerateSimData"
+                  class="btn btn-neutral btn-sm rounded-xl font-bold flex items-center gap-1.5"
+                >
+                  <SparklesIcon class="h-4 w-4 text-warning" />
+                  {{ t('settings.regenerateSimData') }}
+                </button>
               </div>
             </div>
           </div>
         </div>
       </main>
+    </div>
+
+    <!-- Dialog Modals -->
+    <!-- Create Category Modal -->
+    <div v-if="showCreateCategoryModal" class="modal modal-open">
+      <div class="modal-box bg-base-200 border border-base-content/10 rounded-2xl max-w-sm text-left">
+        <h3 class="font-black text-base mb-3">{{ t('settings.createCategory') }}</h3>
+        <input
+          v-model="newCategoryInput"
+          type="text"
+          :placeholder="t('settings.categoryPlaceholder')"
+          class="input input-bordered w-full rounded-xl bg-base-300 focus:outline-none focus:border-primary text-sm h-10 px-3 border border-base-content/10 mb-4"
+          @keyup.enter="submitCreateCategory"
+        />
+        <div class="modal-action mt-0 gap-2">
+          <button type="button" class="btn btn-neutral btn-sm rounded-xl font-bold" @click="showCreateCategoryModal = false">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-primary btn-sm rounded-xl font-bold" @click="submitCreateCategory">
+            {{ t('common.create') }}
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop bg-black/40 backdrop-blur-xs" @click="showCreateCategoryModal = false"></div>
+    </div>
+
+    <!-- Add Path Modal -->
+    <div v-if="showAddPathModal" class="modal modal-open">
+      <div class="modal-box bg-base-200 border border-base-content/10 rounded-2xl max-w-md text-left">
+        <h3 class="font-black text-base mb-1">{{ t('settings.addPathBtn') }}</h3>
+        <p class="text-xs opacity-60 mb-3">{{ t('settings.newCategoryName') }} <span class="font-bold text-secondary">{{ activeCategoryForPath }}</span></p>
+        <input
+          v-model="newPathInput"
+          type="text"
+          :placeholder="t('settings.addPathPlaceholder')"
+          class="input input-bordered w-full rounded-xl bg-base-300 focus:outline-none focus:border-secondary text-sm h-10 px-3 border border-base-content/10 mb-4"
+          @keyup.enter="submitAddPath"
+        />
+        <div class="modal-action mt-0 gap-2">
+          <button type="button" class="btn btn-neutral btn-sm rounded-xl font-bold" @click="showAddPathModal = false">
+            {{ t('common.cancel') }}
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm rounded-xl font-bold" @click="submitAddPath">
+            {{ t('settings.addPathBtn') }}
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop bg-black/40 backdrop-blur-xs" @click="showAddPathModal = false"></div>
     </div>
   </div>
 </template>
@@ -705,22 +793,37 @@ function getTabLabel(tab: 'general' | 'download' | 'connection' | 'simulation') 
   }
 }
 const newCategoryInput = ref('');
-const categoryPathInputs = reactive<Record<string, string>>({});
+const showCreateCategoryModal = ref(false);
 
-function handleCreateCategory() {
+const activeCategoryForPath = ref('');
+const newPathInput = ref('');
+const showAddPathModal = ref(false);
+
+function openCreateCategoryModal() {
+  newCategoryInput.value = '';
+  showCreateCategoryModal.value = true;
+}
+
+function submitCreateCategory() {
   const name = newCategoryInput.value.trim();
   if (name) {
     appStore.addCategory(name);
-    newCategoryInput.value = '';
   }
+  showCreateCategoryModal.value = false;
 }
 
-function handleAddPathToCategory(catName: string) {
-  const path = categoryPathInputs[catName]?.trim();
-  if (path) {
-    appStore.addPathToCategory(catName, path);
-    categoryPathInputs[catName] = '';
+function openAddPathModal(catName: string) {
+  activeCategoryForPath.value = catName;
+  newPathInput.value = '';
+  showAddPathModal.value = true;
+}
+
+function submitAddPath() {
+  const path = newPathInput.value.trim();
+  if (path && activeCategoryForPath.value) {
+    appStore.addPathToCategory(activeCategoryForPath.value, path);
   }
+  showAddPathModal.value = false;
 }
 
 const form = reactive({
