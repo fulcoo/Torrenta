@@ -54,6 +54,17 @@ describe('api service', () => {
       expect(updatedConfig.baseURL).toBe('https://seedbox.com:9000/api/v2');
     });
 
+    it('should map localhost:8080 or 127.0.0.1:8080 to /api/v2 in DEV mode to bypass CORS', () => {
+      safeStorage.setJSON('torrenta_app_config', { url: 'http://localhost:8080' });
+
+      const requestHandlers = (api.interceptors.request as any).handlers;
+      const interceptor = requestHandlers[0].fulfilled;
+      const dummyConfig = { baseURL: '' } as any;
+      const updatedConfig = interceptor(dummyConfig);
+
+      expect(updatedConfig.baseURL).toBe('/api/v2');
+    });
+
     it('should fallback to default baseURL when no custom config exists', () => {
       const requestHandlers = (api.interceptors.request as any).handlers;
       const interceptor = requestHandlers[0].fulfilled;

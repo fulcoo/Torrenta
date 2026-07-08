@@ -3,13 +3,13 @@
     <!-- Connection Offline Warning Banner -->
     <div 
       v-if="!torrentStore.isConnected" 
-      class="alert alert-error bg-error/10 border border-error/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold animate-fadeIn"
+      class="bg-error/10 border border-error/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold animate-fadeIn"
     >
       <div class="flex items-center gap-3 text-left">
         <AlertTriangleIcon class="h-5 w-5 text-error shrink-0 animate-pulse" />
         <div class="leading-snug">
-          <span class="font-black text-error block mb-0.5 text-sm">{{ t('dashboard.telemetryOffline') }}</span>
-          <span class="opacity-80 font-normal text-xs text-base-content">{{ t('dashboard.configureToReconnect') }}</span>
+          <span class="font-black text-red-700 dark:text-error block mb-0.5 text-sm">{{ t('dashboard.telemetryOffline') }}</span>
+          <span class="font-normal text-xs text-base-content/80 block mt-0.5">{{ t('dashboard.configureToReconnect') }}</span>
         </div>
       </div>
       <a href="#/settings" class="btn btn-error btn-sm rounded-xl px-4 shadow-lg shadow-error/25 font-bold shrink-0">

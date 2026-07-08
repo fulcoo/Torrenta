@@ -44,7 +44,19 @@ api.interceptors.request.use((config) => {
   let finalBaseUrl = '/api/v2';
 
   if (storeData && storeData.url) {
-    finalBaseUrl = resolveBaseUrl(storeData.url);
+    const urlStr = storeData.url.toLowerCase();
+    // If in dev mode and the URL points to the local qBittorrent on 8080,
+    // route it through the Vite dev proxy (/api/v2) to avoid CORS issues.
+    if (
+      import.meta.env.DEV &&
+      (urlStr.includes('localhost:8080') ||
+       urlStr.includes('127.0.0.1:8080') ||
+       urlStr.includes('[::1]:8080'))
+    ) {
+      finalBaseUrl = '/api/v2';
+    } else {
+      finalBaseUrl = resolveBaseUrl(storeData.url);
+    }
   }
 
   config.baseURL = finalBaseUrl;

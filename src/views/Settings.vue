@@ -15,13 +15,13 @@
     <div 
       v-if="!torrentStore.isConnected" 
       @click="selectTab('connection')"
-      class="alert alert-warning bg-warning/10 border border-warning/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold cursor-pointer hover:bg-warning/20 transition-all duration-200 animate-fadeIn"
+      class="bg-warning/10 border border-warning/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold cursor-pointer hover:bg-warning/20 transition-all duration-200 animate-fadeIn"
     >
       <div class="flex items-center gap-3">
         <AlertTriangleIcon class="h-5 w-5 text-warning shrink-0 animate-pulse" />
         <div class="leading-snug text-left">
-          <span class="font-black text-warning block mb-0.5 text-sm">{{ t('settings.notConnectedWarningTitle') }}</span>
-          <span class="opacity-80 font-normal text-xs">{{ t('settings.notConnectedWarningDesc') }}</span>
+          <span class="font-black text-amber-800 dark:text-warning block mb-0.5 text-sm">{{ t('settings.notConnectedWarningTitle') }}</span>
+          <span class="font-normal text-xs text-base-content/80 block mt-0.5">{{ t('settings.notConnectedWarningDesc') }}</span>
         </div>
       </div>
       <button class="btn btn-warning btn-sm rounded-xl px-4 shadow-lg shadow-warning/25 font-bold shrink-0">
