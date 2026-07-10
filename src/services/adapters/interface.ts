@@ -11,6 +11,18 @@ export interface AddTorrentOptions {
   sequentialDownload?: boolean;
   firstLastAsStream?: boolean;
   addToTopOfQueue?: boolean;
+  tags?: string;
+  rename?: string;
+  upLimit?: number;
+  dlLimit?: number;
+  ratioLimit?: number;
+  seedingTimeLimit?: number;
+  inactiveSeedingTimeLimit?: number;
+  stopCondition?: 'None' | 'MetadataReceived' | 'FilesChecked';
+  contentLayout?: 'Original' | 'Subfolder' | 'NoSubfolder';
+  forced?: boolean;
+  downloadPath?: string;
+  useDownloadPath?: boolean;
 }
 
 export interface DownloaderAdapter {

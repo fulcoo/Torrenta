@@ -281,8 +281,8 @@
     </div>
 
     <!-- Custom Glassmorphic Removal Dialog Modal -->
-    <dialog :open="showDeleteModal" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': showDeleteModal }">
-      <div class="modal-box glassmorphic border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
+    <dialog :open="showDeleteModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showDeleteModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
         <h3 class="font-black text-lg text-error flex items-center gap-2">
           <AlertTriangleIcon class="h-5.5 w-5.5" /> {{ t('dashboard.removeTitle') }}
         </h3>
@@ -317,8 +317,33 @@
       </div>
     </dialog>
 
+    <!-- Custom Glassmorphic Duplicate Warning Dialog Modal -->
+    <dialog :open="showDuplicateModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showDuplicateModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
+        <h3 class="font-black text-lg text-warning flex items-center gap-2">
+          <CopyIcon class="h-5.5 w-5.5 text-warning" /> {{ t('settings.duplicateTorrentTitle') }}
+        </h3>
+        <p class="py-4 text-xs font-semibold leading-relaxed opacity-85 text-left select-none">
+          {{ t('settings.duplicateTorrentPrompt', { name: duplicateNamesString }) }}
+        </p>
+        
+        <!-- Actions -->
+        <div class="modal-action gap-2 justify-end">
+          <button @click="showDuplicateModal = false" class="btn btn-ghost btn-sm rounded-xl">
+            {{ t('common.cancel') }}
+          </button>
+          <button @click="confirmAddWithNoMerge" class="btn btn-neutral btn-sm rounded-xl font-bold">
+            {{ t('settings.dontMerge') }}
+          </button>
+          <button @click="confirmAddWithMerge" class="btn btn-primary btn-sm rounded-xl px-4 shadow-lg shadow-primary/25 font-bold">
+            {{ t('settings.mergeTrackers') }}
+          </button>
+        </div>
+      </div>
+    </dialog>
+
     <!-- Custom Glassmorphic Torrent Details Dialog Modal -->
-    <dialog :open="!!selectedDetailTorrent" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': !!selectedDetailTorrent }">
+    <dialog :open="!!selectedDetailTorrent" class="modal bg-black/60 z-50" :class="{ 'modal-open': !!selectedDetailTorrent }">
       <div v-if="selectedDetailTorrent" class="modal-box bg-base-100 border border-base-content/10 max-w-2xl rounded-2xl p-6 shadow-2xl relative transition-all duration-300">
         <!-- Close Button -->
         <button type="button" @click="selectedDetailTorrent = null" class="btn btn-ghost btn-xs btn-circle absolute right-4 top-4 hover:bg-base-content/10">
@@ -332,7 +357,7 @@
         <div class="mt-4 flex flex-col gap-4 text-xs text-base-content select-none">
           <!-- Torrent Name Banner -->
           <div class="bg-base-200/50 border border-base-content/5 p-3 rounded-xl flex flex-col gap-1">
-            <span class="text-[10px] font-bold opacity-45 uppercase tracking-wider">名称</span>
+            <span class="text-[10px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.detailName') }}</span>
             <span class="font-extrabold text-sm text-base-content truncate break-all block" :title="selectedDetailTorrent.name">
               {{ selectedDetailTorrent.name }}
             </span>
@@ -341,7 +366,7 @@
           <!-- Loading state if properties are not fetched yet -->
           <div v-if="!detailProperties" class="flex flex-col items-center justify-center py-10 gap-3">
             <span class="loading loading-ring loading-md text-primary"></span>
-            <span class="text-xs opacity-50">正在获取详细信息...</span>
+            <span class="text-xs opacity-50">{{ t('torrent.loadingDetails') }}</span>
           </div>
 
           <!-- Complete detailed fields if fetched -->
@@ -350,61 +375,61 @@
             <!-- Section 1: 传输活动 (Transfer Stats) -->
             <div>
               <h4 class="font-black text-[11px] uppercase tracking-wider text-primary border-b border-base-content/10 pb-1.5 mb-2.5">
-                传输活动
+                {{ t('torrent.transferStats') }}
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 leading-relaxed">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">已下载</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.downloadedDetail') }}</span>
                   <span class="font-bold text-base-content/95">
                     {{ formatSize(detailProperties.total_downloaded) }}
                     <span class="text-[10px] opacity-50 font-normal ml-1">
-                      (本次会话: {{ formatSize(detailProperties.total_downloaded_session) }})
+                      {{ t('torrent.sessionDetail', { size: formatSize(detailProperties.total_downloaded_session) }) }}
                     </span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">已上传</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.uploadedDetail') }}</span>
                   <span class="font-bold text-base-content/95">
                     {{ formatSize(detailProperties.total_uploaded) }}
                     <span class="text-[10px] opacity-50 font-normal ml-1">
-                      (本次会话: {{ formatSize(detailProperties.total_uploaded_session) }})
+                      {{ t('torrent.sessionDetail', { size: formatSize(detailProperties.total_uploaded_session) }) }}
                     </span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">下载速度</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.dlSpeedDetail') }}</span>
                   <span class="font-bold text-base-content/95 flex items-center gap-1 font-mono text-primary">
                     <ArrowDownIcon class="h-3.5 w-3.5" />
                     {{ formatSpeed(selectedDetailTorrent.downloadSpeed) }}
                     <span class="text-[10px] opacity-50 font-normal ml-1 text-base-content">
-                      (平均: {{ formatSpeed(detailProperties.average_download_speed) }})
+                      {{ t('torrent.avgSpeedDetail', { speed: formatSpeed(detailProperties.average_download_speed) }) }}
                     </span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">上传速度</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.upSpeedDetail') }}</span>
                   <span class="font-bold text-base-content/95 flex items-center gap-1 font-mono text-secondary">
                     <ArrowUpIcon class="h-3.5 w-3.5" />
                     {{ formatSpeed(selectedDetailTorrent.uploadSpeed) }}
                     <span class="text-[10px] opacity-50 font-normal ml-1 text-base-content">
-                      (平均: {{ formatSpeed(detailProperties.average_upload_speed) }})
+                      {{ t('torrent.avgSpeedDetail', { speed: formatSpeed(detailProperties.average_upload_speed) }) }}
                     </span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">下载限制</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.dlLimitDetail') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatLimit(detailProperties.dl_limit) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">上传限制</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.upLimitDetail') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatLimit(detailProperties.up_limit) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">分享率</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.shareRatioDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">{{ detailProperties.share_ratio.toFixed(2) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">流行度</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.popularityDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">
                     {{ (detailProperties.peers_total > 0 ? (detailProperties.seeds_total / detailProperties.peers_total) : 0).toFixed(2) }}
                   </span>
@@ -415,30 +440,30 @@
             <!-- Section 2: 集群与连接 (Swarm & Connections) -->
             <div class="pt-2 border-t border-base-content/5">
               <h4 class="font-black text-[11px] uppercase tracking-wider text-primary border-b border-base-content/10 pb-1.5 mb-2.5">
-                做种集群与连接
+                {{ t('torrent.swarmConnections') }}
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 leading-relaxed">
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">做种数 (Seeds)</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.seedsDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">
-                    {{ detailProperties.seeds }} <span class="opacity-50">(总计 {{ detailProperties.seeds_total }})</span>
+                    {{ detailProperties.seeds }} <span class="opacity-50">{{ t('torrent.totalDetail', { total: detailProperties.seeds_total }) }}</span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">连接用户 (Peers)</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.peersDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">
-                    {{ detailProperties.peers }} <span class="opacity-50">(总计 {{ detailProperties.peers_total }})</span>
+                    {{ detailProperties.peers }} <span class="opacity-50">{{ t('torrent.totalDetail', { total: detailProperties.peers_total }) }}</span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">连接数</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.connectionsDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">
                     {{ detailProperties.peers + detailProperties.seeds }} 
-                    <span class="opacity-50">(最大: {{ detailProperties.connection_limit > 0 ? detailProperties.connection_limit : '∞' }})</span>
+                    <span class="opacity-50">{{ t('torrent.maxDetail', { max: detailProperties.connection_limit > 0 ? detailProperties.connection_limit : '∞' }) }}</span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">已丢弃 (Wasted)</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.wastedDetail') }}</span>
                   <span class="font-bold text-base-content/95 font-mono">{{ formatSize(detailProperties.total_wasted) }}</span>
                 </div>
               </div>
@@ -447,36 +472,36 @@
             <!-- Section 3: 时间与活动 (Time & Duration) -->
             <div class="pt-2 border-t border-base-content/5">
               <h4 class="font-black text-[11px] uppercase tracking-wider text-primary border-b border-base-content/10 pb-1.5 mb-2.5">
-                时间与活动记录
+                {{ t('torrent.timeActivity') }}
               </h4>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 leading-relaxed">
                 <div class="flex flex-col gap-0.5 col-span-1 sm:col-span-2">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">传输活动时间</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.elapsedTimeDetail') }}</span>
                   <span class="font-bold text-base-content/95">
                     {{ formatDuration(detailProperties.time_elapsed) }}
                     <span v-if="detailProperties.seeding_time > 0" class="text-[10px] opacity-50 font-normal ml-1">
-                      (已做种: {{ formatDuration(detailProperties.seeding_time) }})
+                      {{ t('torrent.seedingTimeDetail', { time: formatDuration(detailProperties.seeding_time) }) }}
                     </span>
                   </span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">最后完整可见</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.lastSeenComplete') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatDate(detailProperties.last_seen) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">添加时间</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.addedDateDetail') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatDate(detailProperties.addition_date) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">完成时间</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.completedDateDetail') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatDate(detailProperties.completion_date) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">创建时间</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.createdDate') }}</span>
                   <span class="font-bold text-base-content/95">{{ formatDate(detailProperties.creation_date) }}</span>
                 </div>
                 <div class="flex flex-col gap-0.5 col-span-1 sm:col-span-2">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">创建工具</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.createdByDetail') }}</span>
                   <span class="font-bold text-base-content/90 break-all select-text" :title="detailProperties.created_by">
                     {{ detailProperties.created_by || 'Unknown' }}
                   </span>
@@ -487,50 +512,50 @@
             <!-- Section 4: 静态元数据 (Static Metadata) -->
             <div class="pt-2 border-t border-base-content/5">
               <h4 class="font-black text-[11px] uppercase tracking-wider text-primary border-b border-base-content/10 pb-1.5 mb-2.5">
-                种子元数据
+                {{ t('torrent.metadataDetail') }}
               </h4>
               <div class="flex flex-col gap-3.5 leading-relaxed">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   <div class="flex flex-col gap-0.5">
-                    <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">区块</span>
+                    <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.piecesDetail') }}</span>
                     <span class="font-bold text-base-content/90 font-mono">
                       {{ formatPieces(detailProperties.num_pieces, detailProperties.piece_size) }}
                     </span>
                   </div>
                   <div class="flex flex-col gap-0.5">
-                    <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">私密级别</span>
+                    <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.privateLevel') }}</span>
                     <span class="font-bold text-base-content/90">{{ formatPrivate(detailProperties.is_private) }}</span>
                   </div>
                 </div>
 
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">保存路径</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.savePath').split(':')[0] }}</span>
                   <span class="font-bold text-xs text-base-content/90 break-all bg-base-200/20 px-2 py-1 rounded border border-base-content/5 font-mono" :title="detailProperties.save_path">
                     {{ detailProperties.save_path }}
                   </span>
                 </div>
 
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">注释 (Comment)</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.commentDetail') }}</span>
                   <span v-if="detailProperties.comment && detailProperties.comment.startsWith('http')" class="font-bold text-xs text-primary break-all">
                     <a :href="detailProperties.comment" target="_blank" rel="noopener noreferrer" class="hover:underline flex items-center gap-1 font-mono">
                       {{ detailProperties.comment }}
                     </a>
                   </span>
                   <span v-else class="font-bold text-xs text-base-content/80 break-all bg-base-200/20 px-2 py-1 rounded border border-base-content/5 font-mono">
-                    {{ detailProperties.comment || '无注释' }}
+                    {{ detailProperties.comment || t('torrent.noComment') }}
                   </span>
                 </div>
 
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">信息哈希值 v1</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.infoHashV1') }}</span>
                   <span class="font-bold text-[10px] text-base-content/75 select-text bg-base-200/25 px-2 py-1 rounded border border-base-content/5 break-all font-mono">
                     {{ selectedDetailTorrent.id }}
                   </span>
                 </div>
 
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">信息哈希值 v2</span>
+                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.infoHashV2') }}</span>
                   <span class="font-bold text-[10px] text-base-content/50 select-text bg-base-200/25 px-2 py-1 rounded border border-base-content/5 break-all font-mono">
                     N/A
                   </span>
@@ -544,14 +569,14 @@
         <!-- Action Footer -->
         <div class="modal-action gap-2 justify-end mt-4">
           <button @click="selectedDetailTorrent = null" class="btn btn-neutral btn-sm rounded-xl px-4 font-bold">
-            关闭
+            {{ t('common.close') }}
           </button>
         </div>
       </div>
     </dialog>
 
     <!-- Custom Glassmorphic Add Torrent Dialog Modal -->
-    <dialog :open="showAddModal" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': showAddModal }">
+    <dialog :open="showAddModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showAddModal }">
       <div 
         class="modal-box bg-base-100 border border-base-content/10 rounded-2xl p-6 shadow-2xl relative transition-all duration-300"
         :class="selectedFiles.length > 0 ? 'max-w-lg lg:max-w-4xl w-full' : 'max-w-lg w-full'"
@@ -646,7 +671,7 @@
             <!-- 1. Category selected and has paths: show custom select -->
             <div v-if="addForm.category && categoryPathsOptions.length > 0" class="form-control w-full">
               <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.savePath') }}</label>
-              <CustomSelect v-model="addForm.savepath" :options="categoryPathsOptions" />
+              <CustomSelect v-model="addForm.savepath" :options="categoryPathsOptions" :disabled="addForm.autoTMM" />
             </div>
 
             <!-- 2. Category selected but has NO paths: show info block -->
@@ -660,8 +685,9 @@
               <input
                 v-model="addForm.savepath"
                 type="text"
+                :disabled="addForm.autoTMM"
                 :placeholder="t('dashboard.manualPathPlaceholder')"
-                class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10 disabled:opacity-50"
               />
               <p class="text-[10px] opacity-50 mt-1">{{ t('dashboard.unclassifiedTip') }}</p>
             </div>
@@ -691,6 +717,148 @@
                 <input type="checkbox" v-model="addForm.firstLastAsStream" class="checkbox checkbox-primary checkbox-xs rounded animate-fadeIn" />
                 <span class="label-text text-xs opacity-80 font-semibold">{{ t('dashboard.firstLastPiece') }}</span>
               </label>
+            </div>
+
+            <!-- Toggle Advanced Options Button -->
+            <div class="mt-2 flex justify-start">
+              <button 
+                type="button" 
+                @click="showAdvancedOptions = !showAdvancedOptions"
+                class="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 rounded-lg flex items-center gap-1"
+              >
+                <span>{{ showAdvancedOptions ? t('dashboard.hideAdvanced') : t('dashboard.showAdvanced') }}</span>
+              </button>
+            </div>
+
+            <!-- Advanced Options Panel -->
+            <div v-if="showAdvancedOptions" class="flex flex-col gap-4 mt-3 pt-4 border-t border-base-content/10 animate-fadeIn text-left">
+              <!-- Toggles Grid -->
+              <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+                <!-- Automatic Torrent Management (TMM) -->
+                <label class="label cursor-pointer justify-start gap-2.5 select-none py-1" :title="t('dashboard.autoTMMDesc')">
+                  <input type="checkbox" v-model="addForm.autoTMM" class="checkbox checkbox-secondary checkbox-xs rounded animate-fadeIn" />
+                  <span class="label-text text-xs opacity-80 font-semibold">{{ t('dashboard.autoTMM') }}</span>
+                </label>
+
+                <!-- Add to top of queue -->
+                <label class="label cursor-pointer justify-start gap-2.5 select-none py-1" :title="t('dashboard.addToTopOfQueueDesc')">
+                  <input type="checkbox" v-model="addForm.addToTopOfQueue" class="checkbox checkbox-secondary checkbox-xs rounded animate-fadeIn" />
+                  <span class="label-text text-xs opacity-80 font-semibold">{{ t('dashboard.addToTopOfQueue') }}</span>
+                </label>
+
+                <!-- Forced start -->
+                <label class="label cursor-pointer justify-start gap-2.5 select-none py-1" :title="t('dashboard.forcedDesc')">
+                  <input type="checkbox" v-model="addForm.forced" class="checkbox checkbox-secondary checkbox-xs rounded animate-fadeIn" />
+                  <span class="label-text text-xs opacity-80 font-semibold">{{ t('dashboard.forced') }}</span>
+                </label>
+
+                <!-- Use temporary download path -->
+                <label class="label cursor-pointer justify-start gap-2.5 select-none py-1" :title="t('dashboard.downloadPath')">
+                  <input type="checkbox" v-model="addForm.useDownloadPath" class="checkbox checkbox-secondary checkbox-xs rounded animate-fadeIn" />
+                  <span class="label-text text-xs opacity-80 font-semibold">{{ t('dashboard.downloadPath') }}</span>
+                </label>
+              </div>
+
+              <!-- Rename & Tags & Temp Path Inputs -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.rename') }}</label>
+                  <input
+                    v-model="addForm.rename"
+                    type="text"
+                    :placeholder="t('dashboard.renamePlaceholder')"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.tags') }}</label>
+                  <input
+                    v-model="addForm.tags"
+                    type="text"
+                    :placeholder="t('dashboard.tagsPlaceholder')"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+
+                <!-- Custom Temp Download Path input (enabled only if useDownloadPath is checked) -->
+                <div v-if="addForm.useDownloadPath" class="form-control w-full md:col-span-2 animate-fadeIn">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.downloadPath') }}</label>
+                  <input
+                    v-model="addForm.downloadPath"
+                    type="text"
+                    :placeholder="t('dashboard.downloadPathPlaceholder')"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+              </div>
+
+              <!-- Dropdowns Grid (Content Layout & Stop Condition) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.contentLayout') }}</label>
+                  <CustomSelect 
+                    v-model="addForm.contentLayout" 
+                    :options="contentLayoutOptions" 
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.stopCondition') }}</label>
+                  <CustomSelect 
+                    v-model="addForm.stopCondition" 
+                    :options="stopConditionOptions" 
+                  />
+                </div>
+              </div>
+
+              <!-- Limits Grid -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.dlLimit') }}</label>
+                  <input
+                    v-model="addForm.dlLimit"
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.upLimit') }}</label>
+                  <input
+                    v-model="addForm.upLimit"
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.ratioLimit') }}</label>
+                  <input
+                    v-model="addForm.ratioLimit"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder="Unlimited"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('dashboard.seedingTimeLimit') }}</label>
+                  <input
+                    v-model="addForm.seedingTimeLimit"
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+                  />
+                </div>
+              </div>
             </div>
 
             <!-- Actions footer within left column -->
@@ -870,8 +1038,8 @@
     </div>
 
     <!-- Custom Glassmorphic Rename Dialog Modal -->
-    <dialog :open="showRenameModal" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': showRenameModal }">
-      <div class="modal-box glassmorphic border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
+    <dialog :open="showRenameModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showRenameModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
         <h3 class="font-black text-lg text-primary flex items-center gap-2">
           <Edit2Icon class="h-5.5 w-5.5 text-primary" /> {{ t('torrent.rename') }}
         </h3>
@@ -897,8 +1065,8 @@
     </dialog>
 
     <!-- Custom Glassmorphic Change Location Dialog Modal -->
-    <dialog :open="showChangePathModal" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': showChangePathModal }">
-      <div class="modal-box glassmorphic border border-base-content/10 max-w-md rounded-2xl p-6 shadow-2xl">
+    <dialog :open="showChangePathModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showChangePathModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-md rounded-2xl p-6 shadow-2xl">
         <h3 class="font-black text-lg text-primary flex items-center gap-2">
           <FolderOpenIcon class="h-5.5 w-5.5 text-primary" /> {{ t('torrent.changeSavePath') }}
         </h3>
@@ -924,8 +1092,8 @@
     </dialog>
 
     <!-- Custom Glassmorphic Add Tag Dialog Modal -->
-    <dialog :open="showAddTagModal" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': showAddTagModal }">
-      <div class="modal-box glassmorphic border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
+    <dialog :open="showAddTagModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showAddTagModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
         <h3 class="font-black text-lg text-primary flex items-center gap-2">
           <TagIcon class="h-5.5 w-5.5 text-primary" /> {{ t('torrent.addTag') }}
         </h3>
@@ -975,7 +1143,7 @@ import FilterSidebar from '@/components/FilterSidebar.vue';
 import TorrentCard from '@/components/TorrentCard.vue';
 import TorrentFileTree from '@/components/TorrentFileTree.vue';
 import EditTrackerModal from '@/components/EditTrackerModal.vue';
-import { parseTorrentFile, buildFileTree, type ParsedTorrent, type FileTreeNode } from '@/utils/torrentParser';
+import { parseTorrentFile, buildFileTree, parseMagnetLink, type ParsedTorrent, type FileTreeNode } from '@/utils/torrentParser';
 import type { UnifiedTorrent, TorrentProperties } from '@/models/torrent';
 import {
   AlertTriangleIcon,
@@ -999,6 +1167,7 @@ import {
   TagIcon,
   ChevronRightIcon,
   GlobeIcon,
+  CopyIcon,
 } from 'lucide-vue-next';
 
 const torrentStore = useTorrentStore();
@@ -1046,7 +1215,22 @@ const addForm = reactive({
   autoTMM: false,
   sequentialDownload: false,
   firstLastAsStream: false,
+  addToTopOfQueue: false,
+  rename: '',
+  tags: '',
+  contentLayout: 'Original',
+  stopCondition: 'None',
+  dlLimit: '',
+  upLimit: '',
+  ratioLimit: '',
+  seedingTimeLimit: '',
+  inactiveSeedingTimeLimit: '',
+  forced: false,
+  downloadPath: '',
+  useDownloadPath: false,
 });
+
+const showAdvancedOptions = ref(false);
 
 const sortOptions = computed(() => [
   { value: 'added_on', label: t('dashboard.sort.added_on') },
@@ -1062,6 +1246,18 @@ const sortOptions = computed(() => [
 const addCategoryOptions = computed(() => [
   { value: '', label: t('dashboard.noCategory') },
   ...appStore.categoryConfigs.map((c) => ({ value: c.name, label: c.name })),
+]);
+
+const contentLayoutOptions = computed(() => [
+  { value: 'Original', label: t('dashboard.layoutOriginal') },
+  { value: 'Subfolder', label: t('dashboard.layoutSubfolder') },
+  { value: 'NoSubfolder', label: t('dashboard.layoutNoSubfolder') },
+]);
+
+const stopConditionOptions = computed(() => [
+  { value: 'None', label: t('dashboard.stopNone') },
+  { value: 'MetadataReceived', label: t('dashboard.stopMetadata') },
+  { value: 'FilesChecked', label: t('dashboard.stopChecked') },
 ]);
 
 const categoryPathsOptions = computed(() => {
@@ -1107,7 +1303,7 @@ const torrentPreviewOptions = computed(() => {
 async function parseAndAddFile(file: File) {
   try {
     const buffer = await file.arrayBuffer();
-    const parsed = parseTorrentFile(buffer);
+    const parsed = await parseTorrentFile(buffer);
     parsedTorrents.value.push(parsed);
   } catch (err) {
     console.error('Failed to parse torrent file:', file.name, err);
@@ -1128,15 +1324,36 @@ function openAddModal() {
   addForm.autoTMM = false;
   addForm.sequentialDownload = false;
   addForm.firstLastAsStream = false;
+  addForm.addToTopOfQueue = false;
+  addForm.rename = '';
+  addForm.tags = '';
+  addForm.contentLayout = 'Original';
+  addForm.stopCondition = 'None';
+  addForm.dlLimit = '';
+  addForm.upLimit = '';
+  addForm.ratioLimit = '';
+  addForm.seedingTimeLimit = '';
+  addForm.inactiveSeedingTimeLimit = '';
+  addForm.forced = false;
+  addForm.downloadPath = '';
+  addForm.useDownloadPath = false;
+
   selectedFiles.value = [];
   parsedTorrents.value = [];
   activePreviewIndex.value = 0;
   addType.value = 'file';
   showAddModal.value = true;
+  showAdvancedOptions.value = false;
 }
 
 function closeAddModal() {
   showAddModal.value = false;
+}
+
+function clearAddQueue() {
+  selectedFiles.value = [];
+  parsedTorrents.value = [];
+  addForm.urls = '';
 }
 
 function triggerFileInput() {
@@ -1174,29 +1391,184 @@ function removeSelectedFile(index: number) {
   }
 }
 
-async function submitAdd() {
-  isSubmitting.value = true;
-  try {
-    const success = await torrentStore.addTorrents({
-      urls: addType.value === 'url' ? addForm.urls : undefined,
-      files: addType.value === 'file' ? selectedFiles.value : undefined,
-      savepath: addForm.savepath || undefined,
-      category: addForm.category || undefined,
-      paused: addForm.paused,
-      skip_checking: addForm.skip_checking,
-      autoTMM: addForm.autoTMM,
-      sequentialDownload: addForm.sequentialDownload,
-      firstLastAsStream: addForm.firstLastAsStream,
-    });
+const showDuplicateModal = ref(false);
+const duplicateItems = ref<any[]>([]);
+const allPendingItems = ref<any[]>([]);
 
-    if (success) {
-      closeAddModal();
-    } else {
-      alert(t('dashboard.failedToAdd'));
+const duplicateNamesString = computed(() => {
+  return duplicateItems.value.map(i => i.name).join(', ');
+});
+
+async function mergeTrackersForDuplicates(duplicates: any[]) {
+  for (const item of duplicates) {
+    if (item.trackers && item.trackers.length > 0) {
+      const trackersToMerge = item.trackers.map((url: string, idx: number) => ({ url, tier: idx }));
+      await torrentStore.saveTorrentTrackers([item.infoHash.toLowerCase()], trackersToMerge, 'append');
     }
+  }
+}
+
+async function executeAdd(items: any[]) {
+  const files = items.map(i => i.file).filter(Boolean) as File[];
+  const urls = items.map(i => i.url).filter(Boolean) as string[];
+
+  if (files.length === 0 && urls.length === 0) return true;
+
+  const success = await torrentStore.addTorrents({
+    urls: urls.length > 0 ? urls.join('\n') : undefined,
+    files: files.length > 0 ? files : undefined,
+    savepath: addForm.savepath || undefined,
+    category: addForm.category || undefined,
+    paused: addForm.paused,
+    skip_checking: addForm.skip_checking,
+    autoTMM: addForm.autoTMM,
+    sequentialDownload: addForm.sequentialDownload,
+    firstLastAsStream: addForm.firstLastAsStream,
+    addToTopOfQueue: addForm.addToTopOfQueue,
+    tags: addForm.tags.trim() || undefined,
+    rename: addForm.rename.trim() || undefined,
+    upLimit: addForm.upLimit ? parseInt(addForm.upLimit, 10) * 1024 : undefined,
+    dlLimit: addForm.dlLimit ? parseInt(addForm.dlLimit, 10) * 1024 : undefined,
+    ratioLimit: addForm.ratioLimit ? parseFloat(addForm.ratioLimit) : undefined,
+    seedingTimeLimit: addForm.seedingTimeLimit ? parseInt(addForm.seedingTimeLimit, 10) : undefined,
+    inactiveSeedingTimeLimit: addForm.inactiveSeedingTimeLimit ? parseInt(addForm.inactiveSeedingTimeLimit, 10) : undefined,
+    stopCondition: addForm.stopCondition !== 'None' ? addForm.stopCondition as any : undefined,
+    contentLayout: addForm.contentLayout !== 'Original' ? addForm.contentLayout as any : undefined,
+    forced: addForm.forced,
+    downloadPath: addForm.useDownloadPath && addForm.downloadPath ? addForm.downloadPath : undefined,
+    useDownloadPath: addForm.useDownloadPath,
+  });
+
+  if (!success) {
+    alert(t('dashboard.failedToAdd'));
+  }
+  return success;
+}
+
+async function confirmAddWithMerge() {
+  showDuplicateModal.value = false;
+  isSubmitting.value = true;
+  let success = false;
+  try {
+    await mergeTrackersForDuplicates(duplicateItems.value);
+    
+    // Add the non-duplicates
+    const currentHashes = new Set(torrentStore.torrents.map(t => t.id.toLowerCase()));
+    const nonDuplicates = allPendingItems.value.filter(t => !t.infoHash || !currentHashes.has(t.infoHash.toLowerCase()));
+    if (nonDuplicates.length > 0) {
+      success = await executeAdd(nonDuplicates);
+    } else {
+      success = true;
+    }
+    if (appStore.autoDeleteMode === 2 || (appStore.autoDeleteMode === 1 && success)) {
+      clearAddQueue();
+    }
+    closeAddModal();
   } catch (err) {
     console.error(err);
     alert(t('dashboard.errorAdding'));
+    if (appStore.autoDeleteMode === 2) {
+      clearAddQueue();
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function confirmAddWithNoMerge() {
+  showDuplicateModal.value = false;
+  isSubmitting.value = true;
+  let success = false;
+  try {
+    success = await executeAdd(allPendingItems.value);
+    if (appStore.autoDeleteMode === 2 || (appStore.autoDeleteMode === 1 && success)) {
+      clearAddQueue();
+    }
+    closeAddModal();
+  } catch (err) {
+    console.error(err);
+    alert(t('dashboard.errorAdding'));
+    if (appStore.autoDeleteMode === 2) {
+      clearAddQueue();
+    }
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+async function submitAdd() {
+  isSubmitting.value = true;
+  try {
+    const torrentsToAdd: any[] = [];
+
+    if (addType.value === 'file') {
+      parsedTorrents.value.forEach((pt, idx) => {
+        torrentsToAdd.push({
+          name: pt.name,
+          infoHash: pt.infoHash || '',
+          trackers: pt.trackers || [],
+          file: selectedFiles.value[idx],
+        });
+      });
+    } else if (addType.value === 'url') {
+      const lines = addForm.urls.split('\n').map(l => l.trim()).filter(Boolean);
+      lines.forEach(line => {
+        if (line.startsWith('magnet:')) {
+          const parsed = parseMagnetLink(line);
+          if (parsed) {
+            torrentsToAdd.push({
+              name: parsed.name,
+              infoHash: parsed.infoHash,
+              trackers: parsed.trackers || [],
+              url: line,
+            });
+          }
+        } else {
+          torrentsToAdd.push({
+            name: line,
+            infoHash: '',
+            trackers: [],
+            url: line,
+          });
+        }
+      });
+    }
+
+    const currentHashes = new Set(torrentStore.torrents.map(t => t.id.toLowerCase()));
+    const duplicates = torrentsToAdd.filter(t => t.infoHash && currentHashes.has(t.infoHash.toLowerCase()));
+
+    let success = false;
+    if (duplicates.length > 0) {
+      if (appStore.askBeforeMergeTrackers) {
+        duplicateItems.value = duplicates;
+        allPendingItems.value = torrentsToAdd;
+        closeAddModal();
+        showDuplicateModal.value = true;
+        isSubmitting.value = false;
+        return;
+      } else if (appStore.mergeDuplicateTrackers) {
+        await mergeTrackersForDuplicates(duplicates);
+        const nonDuplicates = torrentsToAdd.filter(t => !t.infoHash || !currentHashes.has(t.infoHash.toLowerCase()));
+        if (nonDuplicates.length > 0) {
+          success = await executeAdd(nonDuplicates);
+        } else {
+          success = true;
+        }
+      }
+    } else {
+      success = await executeAdd(torrentsToAdd);
+    }
+
+    if (appStore.autoDeleteMode === 2 || (appStore.autoDeleteMode === 1 && success)) {
+      clearAddQueue();
+    }
+    closeAddModal();
+  } catch (err) {
+    console.error(err);
+    alert(t('dashboard.errorAdding'));
+    if (appStore.autoDeleteMode === 2) {
+      clearAddQueue();
+    }
   } finally {
     isSubmitting.value = false;
   }
@@ -1475,28 +1847,28 @@ function formatDate(timestamp: number | undefined): string {
 }
 
 function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0秒';
+  if (!seconds || seconds <= 0) return '0 ' + t('common.second');
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
 
   const parts = [];
-  if (d > 0) parts.push(`${d}天`);
-  if (h > 0 || d > 0) parts.push(`${h}小时`);
-  if (m > 0 || h > 0 || d > 0) parts.push(`${m}分钟`);
-  if (parts.length === 0 || s > 0) parts.push(`${s}秒`);
-  return parts.slice(0, 3).join('');
+  if (d > 0) parts.push(`${d}${t('common.day')}`);
+  if (h > 0 || d > 0) parts.push(`${h}${t('common.hour')}`);
+  if (m > 0 || h > 0 || d > 0) parts.push(`${m}${t('common.minute')}`);
+  if (parts.length === 0 || s > 0) parts.push(`${s}${t('common.second')}`);
+  return parts.slice(0, 3).join(' ');
 }
 
 function formatLimit(limit: number): string {
-  if (limit === undefined || limit <= 0) return '无限制';
+  if (limit === undefined || limit <= 0) return t('common.unlimited');
   return formatSpeed(limit);
 }
 
 function formatPrivate(isPrivate: boolean | undefined): string {
-  if (isPrivate === undefined) return '未知';
-  return isPrivate ? '私密 (Private)' : '公开 (Public)';
+  if (isPrivate === undefined) return t('common.unknown');
+  return isPrivate ? t('torrent.privateDetail') : t('torrent.publicDetail');
 }
 
 function formatPieces(num: number | undefined, size: number | undefined): string {

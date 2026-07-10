@@ -175,4 +175,43 @@ describe('QBittorrentAdapter', () => {
       expect(api.post).toHaveBeenNthCalledWith(2, '/torrents/pause', expect.any(URLSearchParams), expect.any(Object));
     });
   });
+
+  describe('addTorrents', () => {
+    it('should post options to /torrents/add including advanced parameters', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
+
+      const options = {
+        urls: 'magnet:?xt=urn:btih:xyz',
+        paused: true,
+        autoTMM: true,
+        tags: 'test-tag',
+        rename: 'new-name',
+        upLimit: 10240,
+        dlLimit: 20480,
+        ratioLimit: 2.0,
+        seedingTimeLimit: 120,
+        stopCondition: 'MetadataReceived' as const,
+        contentLayout: 'Subfolder' as const,
+        forced: true,
+      };
+
+      const success = await adapter.addTorrents(options);
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/add', expect.any(FormData), expect.any(Object));
+
+      const calledFormData = vi.mocked(api.post).mock.calls[0][1] as FormData;
+      expect(calledFormData.get('urls')).toBe('magnet:?xt=urn:btih:xyz');
+      expect(calledFormData.get('paused')).toBe('true');
+      expect(calledFormData.get('autoTMM')).toBe('true');
+      expect(calledFormData.get('tags')).toBe('test-tag');
+      expect(calledFormData.get('rename')).toBe('new-name');
+      expect(calledFormData.get('upLimit')).toBe('10240');
+      expect(calledFormData.get('dlLimit')).toBe('20480');
+      expect(calledFormData.get('ratioLimit')).toBe('2');
+      expect(calledFormData.get('seedingTimeLimit')).toBe('120');
+      expect(calledFormData.get('stopCondition')).toBe('MetadataReceived');
+      expect(calledFormData.get('contentLayout')).toBe('Subfolder');
+      expect(calledFormData.get('forced')).toBe('true');
+    });
+  });
 });

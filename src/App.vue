@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useTorrentStore } from '@/stores/torrent';
 import { useI18n } from '@/i18n/useI18n';
@@ -22,6 +22,13 @@ const { t } = useI18n();
 // Simple hash router
 const currentPath = ref(window.location.hash || '#/');
 const languageDropdownOpen = ref(false);
+const languageDropdownRef = ref<HTMLElement | null>(null);
+
+function handleDocumentClick(e: MouseEvent) {
+  if (languageDropdownRef.value && !languageDropdownRef.value.contains(e.target as Node)) {
+    languageDropdownOpen.value = false;
+  }
+}
 
 onMounted(() => {
   // Sync state on hashchange
@@ -31,6 +38,11 @@ onMounted(() => {
 
   // Apply default configured theme to html tag
   document.documentElement.setAttribute('data-theme', appStore.theme);
+  document.addEventListener('click', handleDocumentClick);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleDocumentClick);
 });
 
 const routes: Record<string, any> = {
@@ -119,12 +131,12 @@ const isSettings = computed(() => {
         <!-- Right Side Nav Switchers -->
         <div class="flex items-center gap-1">
           <!-- Language Toggle Dropdown -->
-          <div class="dropdown dropdown-end mr-1" :class="{ 'dropdown-open': languageDropdownOpen }">
-            <button tabindex="0" class="btn btn-ghost btn-sm rounded-xl gap-1 px-2.5 text-xs font-bold opacity-70 hover:opacity-100 focus:outline-none" @click="languageDropdownOpen = !languageDropdownOpen">
+          <div ref="languageDropdownRef" class="relative mr-1">
+            <button type="button" class="btn btn-ghost btn-sm rounded-xl gap-1 px-2.5 text-xs font-bold opacity-70 hover:opacity-100 focus:outline-none" @click="languageDropdownOpen = !languageDropdownOpen">
               <LanguagesIcon class="h-4 w-4" />
               <span class="hidden sm:inline">{{ appStore.locale === 'zh' ? '中文' : 'EN' }}</span>
             </button>
-            <ul tabindex="0" class="dropdown-content menu p-1.5 shadow-2xl bg-base-200 border border-base-content/10 rounded-xl w-28 mt-1 z-[60]" style="--tw-bg-opacity: 1 !important; background-color: var(--b2) !important; background-color: hsl(var(--b2)) !important; background-color: oklch(var(--b2)) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important;">
+            <ul v-if="languageDropdownOpen" class="absolute right-0 mt-1 menu gap-1 p-1.5 shadow-2xl bg-base-200 border border-base-content/10 rounded-xl w-28 z-[60] animate-fadeIn" style="--tw-bg-opacity: 1 !important; background-color: var(--b2) !important; background-color: hsl(var(--b2)) !important; background-color: oklch(var(--b2)) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important;">
               <li>
                 <button type="button" @click="appStore.setLocale('zh'); languageDropdownOpen = false" class="font-bold text-xs py-2 px-3 rounded-lg" :class="appStore.locale === 'zh' ? 'bg-primary/10 text-primary' : ''">
                   简体中文

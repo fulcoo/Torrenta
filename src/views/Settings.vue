@@ -303,6 +303,156 @@
                   <span class="text-[10px] opacity-50">{{ t('settings.doNotStartDesc') }}</span>
                 </div>
               </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Skip hash check -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="appStore.skipChecking"
+                  @change="(e: any) => appStore.setSkipChecking(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('dashboard.skipChecking') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('dashboard.skipChecking') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Auto Delete Mode -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-[10px] uppercase opacity-60 py-1">{{ t('dashboard.autoDeleteMode') }}</label>
+                <CustomSelect 
+                  :modelValue="appStore.autoDeleteMode" 
+                  @update:modelValue="(val: any) => appStore.setAutoDeleteMode(val)"
+                  :options="autoDeleteModeOptions" 
+                />
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Automatic Torrent Management (TMM) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="appStore.autoTMM"
+                  @change="(e: any) => appStore.setAutoTMM(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('dashboard.autoTMM') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('dashboard.autoTMMDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Force Start -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="appStore.forced"
+                  @change="(e: any) => appStore.setForced(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('dashboard.forced') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('dashboard.forcedDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Use Temp Download Path -->
+              <div class="flex flex-col gap-3">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    :checked="appStore.useDownloadPath"
+                    @change="(e: any) => appStore.setUseDownloadPath(e.target.checked)"
+                    type="checkbox"
+                    class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                  />
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-bold text-base-content">{{ t('dashboard.downloadPath') }}</span>
+                    <span class="text-[10px] opacity-50">{{ t('dashboard.downloadPathPlaceholder') }}</span>
+                  </div>
+                </label>
+                
+                <input
+                  v-if="appStore.useDownloadPath"
+                  :value="appStore.downloadPath"
+                  @input="(e: any) => appStore.setDownloadPath(e.target.value)"
+                  type="text"
+                  :placeholder="t('dashboard.downloadPathPlaceholder')"
+                  class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10 animate-fadeIn"
+                />
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Dropdowns: Content Layout & Stop Condition -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                  <label class="label font-bold text-[10px] uppercase opacity-60 py-1">{{ t('dashboard.contentLayout') }}</label>
+                  <CustomSelect 
+                    :modelValue="appStore.contentLayout" 
+                    @update:modelValue="(val: any) => appStore.setContentLayout(val)"
+                    :options="contentLayoutOptions" 
+                  />
+                </div>
+
+                <div class="form-control w-full">
+                  <label class="label font-bold text-[10px] uppercase opacity-60 py-1">{{ t('dashboard.stopCondition') }}</label>
+                  <CustomSelect 
+                    :modelValue="appStore.stopCondition" 
+                    @update:modelValue="(val: any) => appStore.setStopCondition(val)"
+                    :options="stopConditionOptions" 
+                  />
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Sub-header: When adding duplicate torrents -->
+              <div class="flex flex-col gap-1 mt-1">
+                <span class="text-xs font-bold text-secondary flex items-center gap-1.5">
+                  <CopyIcon class="h-4 w-4" /> {{ t('settings.whenAddingDuplicate') }}
+                </span>
+                <span class="text-[10px] opacity-50">{{ t('settings.whenAddingDuplicateDesc') }}</span>
+              </div>
+
+              <!-- Merge duplicate trackers -->
+              <label class="flex items-start gap-3 cursor-pointer select-none pl-2">
+                <input
+                  :checked="appStore.mergeDuplicateTrackers"
+                  @change="(e: any) => appStore.setMergeDuplicateTrackers(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-secondary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.mergeDuplicateTrackers') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.mergeDuplicateTrackersDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-0.5 pl-2 w-full"></div>
+
+              <!-- Ask before merge trackers -->
+              <label class="flex items-start gap-3 cursor-pointer select-none pl-2">
+                <input
+                  :checked="appStore.askBeforeMergeTrackers"
+                  @change="(e: any) => appStore.setAskBeforeMergeTrackers(e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-secondary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.askBeforeMergeTrackers') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.askBeforeMergeTrackersDesc') }}</span>
+                </div>
+              </label>
             </div>
           </div>
 
@@ -313,7 +463,7 @@
                 <h2 class="text-base font-bold flex items-center gap-2">
                   <FolderIcon class="h-5 w-5 text-secondary" /> {{ t('settings.categoryPaths') }}
                 </h2>
-                <span class="text-xs opacity-60">管理下载分类以及各分类对应的多下载目录路径。</span>
+                <span class="text-xs opacity-60">{{ t('settings.categoryPathsDesc') }}</span>
               </div>
               <button 
                 type="button" 
@@ -602,7 +752,7 @@
             <div class="form-control bg-base-200/50 border border-base-content/5 p-4 rounded-xl flex flex-row items-center justify-between gap-4">
               <div class="flex flex-col gap-0.5">
                 <span class="text-sm font-bold">{{ t('settings.enableSimulation') }}</span>
-                <span class="text-[10px] opacity-50">开启后接管数据拉取，展示各种虚拟状态的种子</span>
+                <span class="text-[10px] opacity-50">{{ t('settings.enableSimulationDesc') }}</span>
               </div>
               <input
                 type="checkbox"
@@ -741,6 +891,7 @@ import {
   GlobeIcon,
   InboxIcon,
   AlertTriangleIcon,
+  CopyIcon,
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
@@ -753,6 +904,24 @@ const driverOptions = [
   { value: 'transmission', label: 'Transmission (JSON-RPC) - Coming soon', disabled: true },
   { value: 'aria2', label: 'Aria2 (JSON-RPC) - Coming soon', disabled: true },
 ];
+
+const contentLayoutOptions = computed(() => [
+  { value: 'Original', label: t('dashboard.layoutOriginal') },
+  { value: 'Subfolder', label: t('dashboard.layoutSubfolder') },
+  { value: 'NoSubfolder', label: t('dashboard.layoutNoSubfolder') },
+]);
+
+const stopConditionOptions = computed(() => [
+  { value: 'None', label: t('dashboard.stopNone') },
+  { value: 'MetadataReceived', label: t('dashboard.stopMetadata') },
+  { value: 'FilesChecked', label: t('dashboard.stopChecked') },
+]);
+
+const autoDeleteModeOptions = computed(() => [
+  { value: 0, label: t('dashboard.autoDeleteNever') },
+  { value: 1, label: t('dashboard.autoDeleteIfAdded') },
+  { value: 2, label: t('dashboard.autoDeleteAlways') },
+]);
 
 const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
 const errorLog = ref<string | null>(null);

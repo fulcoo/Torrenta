@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { decodeBencode, parseTorrentFile, buildFileTree } from '../torrentParser';
+import { decodeBencode, parseTorrentFile, buildFileTree, parseMagnetLink } from '../torrentParser';
 
 // Helper to convert a string to Uint8Array
 function stringToUint8Array(str: string): Uint8Array {
@@ -53,11 +53,11 @@ describe('torrentParser', () => {
   });
 
   describe('parseTorrentFile', () => {
-    it('should parse single-file torrent', () => {
+    it('should parse single-file torrent', async () => {
       // d4:infod4:name9:test.epub6:lengthi1024eee
       const bencodeStr = 'd4:infod4:name9:test.epub6:lengthi1024eee';
       const buffer = stringToUint8Array(bencodeStr).buffer as ArrayBuffer;
-      const parsed = parseTorrentFile(buffer);
+      const parsed = await parseTorrentFile(buffer);
 
       expect(parsed.name).toBe('test.epub');
       expect(parsed.totalSize).toBe(1024);
@@ -69,11 +69,11 @@ describe('torrentParser', () => {
       });
     });
 
-    it('should parse multi-file torrent', () => {
+    it('should parse multi-file torrent', async () => {
       // d4:infod4:name4:root5:filesld6:lengthi512e4:pathl9:file1.txteed6:lengthi256e4:pathl3:dir9:file2.txteeeee
       const bencodeStr = 'd4:infod4:name4:root5:filesld6:lengthi512e4:pathl9:file1.txteed6:lengthi256e4:pathl3:dir9:file2.txteeeee';
       const buffer = stringToUint8Array(bencodeStr).buffer as ArrayBuffer;
-      const parsed = parseTorrentFile(buffer);
+      const parsed = await parseTorrentFile(buffer);
 
       expect(parsed.name).toBe('root');
       expect(parsed.totalSize).toBe(768);
@@ -90,10 +90,47 @@ describe('torrentParser', () => {
       });
     });
 
-    it('should throw error on missing info dict', () => {
+    it('should parse trackers and infoHash from torrent file', async () => {
+      // Bencode for:
+      // d
+      //   8:announce27:http://tracker.com/announce
+      //   13:announce-listll27:http://tracker.com/announceel28:http://tracker2.com/announceee
+      //   4:infod4:name9:test.epub6:lengthi1024ee
+      // e
+      const bencodeStr = 'd8:announce27:http://tracker.com/announce13:announce-listll27:http://tracker.com/announceel28:http://tracker2.com/announceee4:infod4:name9:test.epub6:lengthi1024eee';
+      const buffer = stringToUint8Array(bencodeStr).buffer as ArrayBuffer;
+      const parsed = await parseTorrentFile(buffer);
+
+      expect(parsed.name).toBe('test.epub');
+      expect(parsed.totalSize).toBe(1024);
+      expect(parsed.trackers).toEqual([
+        'http://tracker.com/announce',
+        'http://tracker2.com/announce'
+      ]);
+      expect(parsed.infoHash).toBeDefined();
+      expect(parsed.infoHash).toHaveLength(40);
+    });
+
+    it('should throw error on missing info dict', async () => {
       const bencodeStr = 'd4:name9:test.epube';
       const buffer = stringToUint8Array(bencodeStr).buffer as ArrayBuffer;
-      expect(() => parseTorrentFile(buffer)).toThrow('Missing info dictionary in torrent');
+      await expect(parseTorrentFile(buffer)).rejects.toThrow('Missing info dictionary in torrent');
+    });
+  });
+
+  describe('parseMagnetLink', () => {
+    it('should parse magnet links correctly', () => {
+      const magnetUrl = 'magnet:?xt=urn:btih:d399999999999999999999999999999999999999&dn=test_name&tr=http%3A%2F%2Ftracker1.com%2Fannounce&tr=http%3A%2F%2Ftracker2.com%2Fannounce';
+      const parsed = parseMagnetLink(magnetUrl);
+      expect(parsed).toEqual({
+        name: 'test_name',
+        infoHash: 'd399999999999999999999999999999999999999',
+        trackers: ['http://tracker1.com/announce', 'http://tracker2.com/announce']
+      });
+    });
+
+    it('should return null for non-magnet links', () => {
+      expect(parseMagnetLink('http://example.com')).toBeNull();
     });
   });
 

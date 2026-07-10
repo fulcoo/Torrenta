@@ -1,5 +1,5 @@
 <template>
-  <dialog :open="open" class="modal bg-black/60 backdrop-blur-sm z-50" :class="{ 'modal-open': open }">
+  <dialog :open="open" class="modal bg-black/60 z-50" :class="{ 'modal-open': open }">
     <div class="modal-box bg-base-200 border border-base-content/10 max-w-2xl w-full rounded-2xl p-6 shadow-2xl relative flex flex-col max-h-[85vh] overflow-hidden">
       <!-- Header -->
       <div class="flex items-center justify-between pb-4 border-b border-base-content/10 shrink-0">
@@ -86,7 +86,7 @@
                   :class="isTrackerUrlInvalid(tracker.url) ? 'text-error placeholder-error/50' : ''"
                 />
                 <!-- Warning icon for invalid URL -->
-                <AlertTriangleIcon v-if="isTrackerUrlInvalid(tracker.url)" class="h-3.5 w-3.5 text-error shrink-0 animate-pulse" title="URL 格式不合法" />
+                <AlertTriangleIcon v-if="isTrackerUrlInvalid(tracker.url)" class="h-3.5 w-3.5 text-error shrink-0 animate-pulse" :title="t('torrent.trackerUrlInvalidTitle')" />
                 <!-- Move Tier Select -->
                 <CustomSelect
                   v-model="trackers[tracker.originalIndex].tier"
@@ -147,11 +147,11 @@
           ></textarea>
           <div class="text-[10px] opacity-50 px-1 font-medium leading-normal flex items-start gap-1">
             <InfoIcon class="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-            <span>换行代表同一个 Tier 中的不同链接，<strong>单个空行</strong>代表进入下一个优先级 Tier 分组。</span>
+            <span>{{ t('torrent.trackerRawDesc') }}</span>
           </div>
           <div v-if="hasInvalidUrlsInRaw" class="text-[10px] text-error font-extrabold px-1 flex items-start gap-1 mt-1 animate-fadeIn">
             <AlertTriangleIcon class="h-3.5 w-3.5 text-error shrink-0" />
-            <span>检测到部分 Tracker 链接格式不合法（必须包含 http://, https://, udp://, ws:// 或 wss:// 协议），保存将被拦截。</span>
+            <span>{{ t('torrent.trackerRawInvalidWarn') }}</span>
           </div>
         </div>
 
@@ -427,7 +427,7 @@ watch(() => props.open, async (isOpen) => {
       }
     } catch (err) {
       console.error('Failed to initialize trackers modal:', err);
-      errorMessage.value = '无法加载 Tracker 数据，请检查网络或重试。';
+      errorMessage.value = t('torrent.trackerLoadError');
     } finally {
       isLoading.value = false;
     }
@@ -502,7 +502,7 @@ async function confirmSave() {
   // Validation: Check if there are any invalid non-empty tracker URLs
   const hasInvalid = filtered.some(t => isTrackerUrlInvalid(t.url));
   if (hasInvalid) {
-    errorMessage.value = '存在格式不正确的 Tracker 链接，请修改后再保存！';
+    errorMessage.value = t('torrent.trackerSaveInvalidError');
     return;
   }
 

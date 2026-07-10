@@ -8,6 +8,8 @@ export interface ParsedTorrent {
   name: string;
   files: TorrentFile[];
   totalSize: number;
+  infoHash?: string;
+  trackers?: string[];
 }
 
 export interface FileTreeNode {
@@ -83,12 +85,18 @@ export function decodeBencode(buffer: Uint8Array): any {
         const keyBytes = parseStringBytes();
         const key = decoder.decode(keyBytes);
         
+        const valStart = offset;
         let val: any;
         if (key === 'pieces') {
           // Speed optimization: do not decode pieces block as UTF-8 string
           val = parseStringBytes();
         } else {
           val = parseVal();
+        }
+        const valEnd = offset;
+        
+        if (key === 'info') {
+          dict._infoBytes = buffer.subarray(valStart, valEnd);
         }
         dict[key] = val;
       }
@@ -108,10 +116,31 @@ export function decodeBencode(buffer: Uint8Array): any {
   return parseVal();
 }
 
+async function computeSha1(bytes: Uint8Array): Promise<string> {
+  const hashBuffer = await crypto.subtle.digest('SHA-1', bytes as any);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+export function parseMagnetLink(url: string): { name: string; infoHash: string; trackers: string[] } | null {
+  if (!url.startsWith('magnet:')) return null;
+  const parts = url.split('?')[1] || '';
+  const params = new URLSearchParams(parts);
+  const xt = params.get('xt') || '';
+  let infoHash = '';
+  if (xt.startsWith('urn:btih:')) {
+    infoHash = xt.substring(9).toLowerCase();
+  }
+  const dn = params.get('dn') || '';
+  const name = dn ? decodeURIComponent(dn) : 'Magnet Link';
+  const trackers = params.getAll('tr').map(tr => decodeURIComponent(tr));
+  return { name, infoHash, trackers };
+}
+
 /**
  * Parses a .torrent ArrayBuffer and extracts the torrent structure.
  */
-export function parseTorrentFile(arrayBuffer: ArrayBuffer): ParsedTorrent {
+export async function parseTorrentFile(arrayBuffer: ArrayBuffer): Promise<ParsedTorrent> {
   const bytes = new Uint8Array(arrayBuffer);
   const decoded = decodeBencode(bytes);
 
@@ -159,10 +188,39 @@ export function parseTorrentFile(arrayBuffer: ArrayBuffer): ParsedTorrent {
     totalSize = info.length;
   }
 
+  // Extract trackers
+  const trackers: string[] = [];
+  if (typeof decoded.announce === 'string' && decoded.announce.trim()) {
+    trackers.push(decoded.announce.trim());
+  }
+  if (Array.isArray(decoded['announce-list'])) {
+    for (const tier of decoded['announce-list']) {
+      if (Array.isArray(tier)) {
+        for (const url of tier) {
+          if (typeof url === 'string' && url.trim() && !trackers.includes(url.trim())) {
+            trackers.push(url.trim());
+          }
+        }
+      }
+    }
+  }
+
+  // Compute info hash
+  let infoHash = '';
+  if (decoded._infoBytes) {
+    try {
+      infoHash = await computeSha1(decoded._infoBytes);
+    } catch (e) {
+      console.error('Failed to compute info hash:', e);
+    }
+  }
+
   return {
     name,
     files,
     totalSize,
+    infoHash,
+    trackers,
   };
 }
 

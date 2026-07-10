@@ -27,6 +27,16 @@ export const useAppStore = defineStore('appStore', () => {
   const showMobileSidebar = ref(false);
   const addToTopOfQueue = ref(safeStorage.getItem('torrenta_add_to_top_of_queue') === 'true');
   const doNotStart = ref(safeStorage.getItem('torrenta_do_not_start') === 'true');
+  const mergeDuplicateTrackers = ref(safeStorage.getItem('torrenta_merge_duplicate_trackers') === 'true');
+  const askBeforeMergeTrackers = ref(safeStorage.getItem('torrenta_ask_before_merge_trackers') !== 'false');
+  const skipChecking = ref(safeStorage.getItem('torrenta_skip_checking') === 'true');
+  const autoTMM = ref(safeStorage.getItem('torrenta_auto_tmm') === 'true');
+  const contentLayout = ref(safeStorage.getItem('torrenta_content_layout') || 'Original');
+  const stopCondition = ref(safeStorage.getItem('torrenta_stop_condition') || 'None');
+  const forced = ref(safeStorage.getItem('torrenta_forced') === 'true');
+  const useDownloadPath = ref(safeStorage.getItem('torrenta_use_download_path') === 'true');
+  const downloadPath = ref(safeStorage.getItem('torrenta_download_path') || '');
+  const autoDeleteMode = ref(parseInt(safeStorage.getItem('torrenta_auto_delete_mode') || '0', 10));
 
   function saveConfig(
     newUrl: string,
@@ -125,6 +135,56 @@ export const useAppStore = defineStore('appStore', () => {
     safeStorage.setItem('torrenta_do_not_start', String(val));
   }
 
+  function setMergeDuplicateTrackers(val: boolean) {
+    mergeDuplicateTrackers.value = val;
+    safeStorage.setItem('torrenta_merge_duplicate_trackers', String(val));
+  }
+
+  function setAskBeforeMergeTrackers(val: boolean) {
+    askBeforeMergeTrackers.value = val;
+    safeStorage.setItem('torrenta_ask_before_merge_trackers', String(val));
+  }
+
+  function setSkipChecking(val: boolean) {
+    skipChecking.value = val;
+    safeStorage.setItem('torrenta_skip_checking', String(val));
+  }
+
+  function setAutoTMM(val: boolean) {
+    autoTMM.value = val;
+    safeStorage.setItem('torrenta_auto_tmm', String(val));
+  }
+
+  function setContentLayout(val: string) {
+    contentLayout.value = val;
+    safeStorage.setItem('torrenta_content_layout', val);
+  }
+
+  function setStopCondition(val: string) {
+    stopCondition.value = val;
+    safeStorage.setItem('torrenta_stop_condition', val);
+  }
+
+  function setForced(val: boolean) {
+    forced.value = val;
+    safeStorage.setItem('torrenta_forced', String(val));
+  }
+
+  function setUseDownloadPath(val: boolean) {
+    useDownloadPath.value = val;
+    safeStorage.setItem('torrenta_use_download_path', String(val));
+  }
+
+  function setDownloadPath(val: string) {
+    downloadPath.value = val;
+    safeStorage.setItem('torrenta_download_path', val);
+  }
+
+  function setAutoDeleteMode(val: number) {
+    autoDeleteMode.value = val;
+    safeStorage.setItem('torrenta_auto_delete_mode', String(val));
+  }
+
   // Initialize theme on mount
   setTheme(theme.value);
 
@@ -161,5 +221,25 @@ export const useAppStore = defineStore('appStore', () => {
     doNotStart,
     setAddToTopOfQueue,
     setDoNotStart,
+    mergeDuplicateTrackers,
+    askBeforeMergeTrackers,
+    setMergeDuplicateTrackers,
+    setAskBeforeMergeTrackers,
+    skipChecking,
+    setSkipChecking,
+    autoTMM,
+    setAutoTMM,
+    contentLayout,
+    setContentLayout,
+    stopCondition,
+    setStopCondition,
+    forced,
+    setForced,
+    useDownloadPath,
+    setUseDownloadPath,
+    downloadPath,
+    setDownloadPath,
+    autoDeleteMode,
+    setAutoDeleteMode,
   };
 });

@@ -223,6 +223,42 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       if (options.addToTopOfQueue !== undefined) {
         formData.append('addToTopOfQueue', options.addToTopOfQueue ? 'true' : 'false');
       }
+      if (options.tags !== undefined) {
+        formData.append('tags', options.tags);
+      }
+      if (options.rename !== undefined) {
+        formData.append('rename', options.rename);
+      }
+      if (options.upLimit !== undefined) {
+        formData.append('upLimit', String(options.upLimit));
+      }
+      if (options.dlLimit !== undefined) {
+        formData.append('dlLimit', String(options.dlLimit));
+      }
+      if (options.ratioLimit !== undefined) {
+        formData.append('ratioLimit', String(options.ratioLimit));
+      }
+      if (options.seedingTimeLimit !== undefined) {
+        formData.append('seedingTimeLimit', String(options.seedingTimeLimit));
+      }
+      if (options.inactiveSeedingTimeLimit !== undefined) {
+        formData.append('inactiveSeedingTimeLimit', String(options.inactiveSeedingTimeLimit));
+      }
+      if (options.stopCondition !== undefined) {
+        formData.append('stopCondition', options.stopCondition);
+      }
+      if (options.contentLayout !== undefined) {
+        formData.append('contentLayout', options.contentLayout);
+      }
+      if (options.forced !== undefined) {
+        formData.append('forced', options.forced ? 'true' : 'false');
+      }
+      if (options.downloadPath !== undefined) {
+        formData.append('downloadPath', options.downloadPath);
+      }
+      if (options.useDownloadPath !== undefined) {
+        formData.append('useDownloadPath', options.useDownloadPath ? 'true' : 'false');
+      }
 
       await api.post('/torrents/add', formData, {
         headers: {

@@ -101,4 +101,40 @@ describe('appStore', () => {
     expect(store.simulatedCount).toBe(25);
     expect(safeStorage.getItem('torrenta_simulated_count')).toBe('25');
   });
+
+  it('should set advanced defaults options correctly', () => {
+    const store = useAppStore();
+
+    store.setSkipChecking(true);
+    expect(store.skipChecking).toBe(true);
+    expect(safeStorage.getItem('torrenta_skip_checking')).toBe('true');
+
+    store.setAutoTMM(true);
+    expect(store.autoTMM).toBe(true);
+    expect(safeStorage.getItem('torrenta_auto_tmm')).toBe('true');
+
+    store.setContentLayout('Subfolder');
+    expect(store.contentLayout).toBe('Subfolder');
+    expect(safeStorage.getItem('torrenta_content_layout')).toBe('Subfolder');
+
+    store.setStopCondition('MetadataReceived');
+    expect(store.stopCondition).toBe('MetadataReceived');
+    expect(safeStorage.getItem('torrenta_stop_condition')).toBe('MetadataReceived');
+
+    store.setForced(true);
+    expect(store.forced).toBe(true);
+    expect(safeStorage.getItem('torrenta_forced')).toBe('true');
+
+    store.setUseDownloadPath(true);
+    expect(store.useDownloadPath).toBe(true);
+    expect(safeStorage.getItem('torrenta_use_download_path')).toBe('true');
+
+    store.setDownloadPath('/downloads/temp');
+    expect(store.downloadPath).toBe('/downloads/temp');
+    expect(safeStorage.getItem('torrenta_download_path')).toBe('/downloads/temp');
+
+    store.setAutoDeleteMode(1);
+    expect(store.autoDeleteMode).toBe(1);
+    expect(safeStorage.getItem('torrenta_auto_delete_mode')).toBe('1');
+  });
 });
