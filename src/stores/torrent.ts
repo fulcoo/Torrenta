@@ -760,6 +760,16 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         proxy_peer_connections: safeStorage.getItem('torrenta_proxy_peer_connections') === 'true',
         proxy_username: safeStorage.getItem('torrenta_proxy_username') || '',
         proxy_password: safeStorage.getItem('torrenta_proxy_password') || '',
+        dht: safeStorage.getItem('torrenta_dht') !== 'false', // Default to true
+        pex: safeStorage.getItem('torrenta_pex') !== 'false', // Default to true
+        lsd: safeStorage.getItem('torrenta_lsd') !== 'false', // Default to true
+        encryption: parseInt(safeStorage.getItem('torrenta_encryption') || '0'),
+        anonymous_mode: safeStorage.getItem('torrenta_anonymous_mode') === 'true',
+        queueing_enabled: safeStorage.getItem('torrenta_queueing_enabled') === 'true',
+        max_active_downloads: parseInt(safeStorage.getItem('torrenta_max_active_downloads') || '3'),
+        max_active_uploads: parseInt(safeStorage.getItem('torrenta_max_active_uploads') || '3'),
+        max_active_torrents: parseInt(safeStorage.getItem('torrenta_max_active_torrents') || '5'),
+        dont_count_slow_torrents: safeStorage.getItem('torrenta_dont_count_slow_torrents') === 'true',
       };
     }
 
@@ -807,6 +817,16 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         'proxy_peer_connections',
         'proxy_username',
         'proxy_password',
+        'dht',
+        'pex',
+        'lsd',
+        'encryption',
+        'anonymous_mode',
+        'queueing_enabled',
+        'max_active_downloads',
+        'max_active_uploads',
+        'max_active_torrents',
+        'dont_count_slow_torrents',
       ];
       for (const key of keys) {
         if (prefs[key] !== undefined) {

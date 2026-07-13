@@ -245,6 +245,16 @@ describe('QBittorrentAdapter', () => {
         proxy_peer_connections: false,
         proxy_username: '',
         proxy_password: '',
+        dht: true,
+        pex: true,
+        lsd: true,
+        encryption: 0,
+        anonymous_mode: false,
+        queueing_enabled: false,
+        max_active_downloads: 3,
+        max_active_uploads: 3,
+        max_active_torrents: 5,
+        dont_count_slow_torrents: false,
       };
       vi.mocked(api.get).mockResolvedValueOnce({ data: mockPrefs });
 
@@ -283,6 +293,16 @@ describe('QBittorrentAdapter', () => {
         proxy_peer_connections: false,
         proxy_username: '',
         proxy_password: '',
+        dht: true,
+        pex: true,
+        lsd: true,
+        encryption: 0,
+        anonymous_mode: false,
+        queueing_enabled: false,
+        max_active_downloads: 3,
+        max_active_uploads: 3,
+        max_active_torrents: 5,
+        dont_count_slow_torrents: false,
       };
       const success = await adapter.setPreferences(prefPayload);
       expect(success).toBe(true);

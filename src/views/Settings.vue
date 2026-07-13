@@ -97,6 +97,14 @@
             <RadioIcon class="h-4 w-4" /> {{ t('settings.tabConnection') }}
           </button>
           <button
+            type="button"
+            @click="selectTab('bittorrent')"
+            class="btn btn-sm justify-start gap-2.5 rounded-xl font-bold w-full border-none shadow-none text-left h-10 animate-fadeIn"
+            :class="activeTab === 'bittorrent' ? 'bg-primary text-primary-content hover:bg-primary/95' : 'bg-transparent hover:bg-base-content/10'"
+          >
+            <TagIcon class="h-4 w-4" /> {{ t('settings.tabBitTorrent') }}
+          </button>
+          <button
             v-if="isDev"
             type="button"
             @click="selectTab('simulation')"
@@ -1897,8 +1905,304 @@
           </div>
         </div>
 
+        <!-- 4. BitTorrent Panel -->
+        <div v-if="activeTab === 'bittorrent'" class="flex flex-col gap-6">
+          <!-- Privacy & Protocols Card -->
+          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+            <!-- Loading overlay when updating preferences -->
+            <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
+              <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="loading loading-spinner loading-xs text-primary"></span>
+                <span>{{ t('settings.updatingPreferences') }}</span>
+              </div>
+            </div>
 
-        <!-- 4. Simulation Panel -->
+            <!-- Header -->
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <TagIcon class="h-5 w-5 text-primary" /> {{ t('settings.privacyTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.privacyDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4">
+              <!-- DHT Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.dht"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('dht', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableDht') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- PeX Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.pex"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('pex', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enablePex') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- LSD Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.lsd"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('lsd', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableLsd') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Encryption Mode Selector -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.encryptionModeLabel') }}</span>
+                <div class="w-full sm:max-w-xs shrink-0">
+                  <CustomSelect
+                    :modelValue="prefs.encryption"
+                    @update:modelValue="(val: any) => updatePref('encryption', parseInt(val))"
+                    :options="[
+                      { value: 0, label: t('settings.encryptionModeOptions.prefer') },
+                      { value: 1, label: t('settings.encryptionModeOptions.forceOn') },
+                      { value: 2, label: t('settings.encryptionModeOptions.forceOff') }
+                    ]"
+                    :disabled="savingPrefs"
+                  />
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/10 my-2"></div>
+
+              <!-- Anonymous Mode Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.anonymous_mode"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('anonymous_mode', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.anonymousModeLabel') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.anonymousModeDesc') }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Queueing Settings Card -->
+          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+            <!-- Loading overlay when updating preferences -->
+            <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
+              <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="loading loading-spinner loading-xs text-primary"></span>
+                <span>{{ t('settings.updatingPreferences') }}</span>
+              </div>
+            </div>
+
+            <!-- Header -->
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <SlidersIcon class="h-5 w-5 text-secondary" /> {{ t('settings.queueingTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.queueingDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4">
+              <!-- Enable Queueing Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.queueing_enabled"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('queueing_enabled', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableQueueing') }}</span>
+                </div>
+              </label>
+
+              <!-- Conditionally render active queues limits -->
+              <div v-if="prefs.queueing_enabled" class="flex flex-col gap-4 mt-2 animate-fadeIn border-t border-base-content/5 pt-4">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <!-- Max active downloads -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.maxActiveDownloads') }}</span>
+                    </label>
+                    <div class="relative flex items-center w-full">
+                      <input
+                        :value="prefs.max_active_downloads"
+                        @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                        @change="(e: any) => updatePref('max_active_downloads', Math.max(0, parseInt(e.target.value || '0')))"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        :disabled="savingPrefs"
+                        class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                      />
+                      <!-- Custom up/down adjustment buttons -->
+                      <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_downloads', prefs.max_active_downloads + 1)"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_downloads', Math.max(0, prefs.max_active_downloads - 1))"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Max active uploads -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.maxActiveUploads') }}</span>
+                    </label>
+                    <div class="relative flex items-center w-full">
+                      <input
+                        :value="prefs.max_active_uploads"
+                        @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                        @change="(e: any) => updatePref('max_active_uploads', Math.max(0, parseInt(e.target.value || '0')))"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        :disabled="savingPrefs"
+                        class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                      />
+                      <!-- Custom up/down adjustment buttons -->
+                      <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_uploads', prefs.max_active_uploads + 1)"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_uploads', Math.max(0, prefs.max_active_uploads - 1))"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Max active torrents -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.maxActiveTorrents') }}</span>
+                    </label>
+                    <div class="relative flex items-center w-full">
+                      <input
+                        :value="prefs.max_active_torrents"
+                        @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                        @change="(e: any) => updatePref('max_active_torrents', Math.max(0, parseInt(e.target.value || '0')))"
+                        type="text"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        :disabled="savingPrefs"
+                        class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                      />
+                      <!-- Custom up/down adjustment buttons -->
+                      <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_torrents', prefs.max_active_torrents + 1)"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                        <button
+                          type="button"
+                          @click="updatePref('max_active_torrents', Math.max(0, prefs.max_active_torrents - 1))"
+                          :disabled="savingPrefs"
+                          class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                        >
+                          <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+                <!-- Dont count slow torrents toggle -->
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    :checked="prefs.dont_count_slow_torrents"
+                    :disabled="savingPrefs"
+                    @change="(e: any) => updatePref('dont_count_slow_torrents', e.target.checked)"
+                    type="checkbox"
+                    class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                  />
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-bold text-base-content">{{ t('settings.dontCountSlow') }}</span>
+                    <span class="text-[10px] opacity-50">{{ t('settings.dontCountSlowDesc') }}</span>
+                  </div>
+                </label>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Simulation Panel -->
         <div v-if="activeTab === 'simulation' && isDev" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left animate-fadeIn flex flex-col gap-4">
           <div class="flex flex-col gap-1">
             <h2 class="text-base font-bold flex items-center gap-2">
@@ -2091,7 +2395,7 @@ const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
 const errorLog = ref<string | null>(null);
 
 // Read initial tab from hash query (e.g. #/settings?tab=download)
-function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'simulation' {
+function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation' {
   const hash = window.location.hash; // e.g. "#/settings?tab=download"
   const queryStart = hash.indexOf('?');
   if (queryStart !== -1) {
@@ -2101,6 +2405,7 @@ function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'sim
       tab === 'download' ||
       tab === 'speed' ||
       tab === 'connection' ||
+      tab === 'bittorrent' ||
       (tab === 'simulation' && isDev) ||
       tab === 'general'
     ) {
@@ -2110,10 +2415,10 @@ function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'sim
   return 'general';
 }
 
-const activeTab = ref<'general' | 'download' | 'speed' | 'connection' | 'simulation'>(getInitialTab());
+const activeTab = ref<'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation'>(getInitialTab());
 const showMobileMenu = ref(false);
 
-function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'simulation') {
+function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation') {
   if (tab === 'simulation' && !isDev) {
     activeTab.value = 'general';
   } else {
@@ -2122,12 +2427,13 @@ function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'simul
   showMobileMenu.value = false;
 }
 
-function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'simulation') {
+function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation') {
   switch (tab) {
     case 'general': return t('settings.tabGeneral');
     case 'download': return t('settings.tabDownload');
     case 'speed': return t('settings.tabSpeed');
     case 'connection': return t('settings.tabConnection');
+    case 'bittorrent': return t('settings.tabBitTorrent');
     case 'simulation': return t('settings.tabSimulation');
     default: return '';
   }
@@ -2169,6 +2475,16 @@ const prefs = reactive({
   proxy_peer_connections: false,
   proxy_username: '',
   proxy_password: '',
+  dht: false,
+  pex: false,
+  lsd: false,
+  encryption: 0,
+  anonymous_mode: false,
+  queueing_enabled: false,
+  max_active_downloads: 0,
+  max_active_uploads: 0,
+  max_active_torrents: 0,
+  dont_count_slow_torrents: false,
 });
 const savingPrefs = ref(false);
 
@@ -2281,6 +2597,17 @@ async function fetchServerPreferences() {
       prefs.proxy_username = data.proxy_username || '';
       prefs.proxy_password = data.proxy_password || '';
 
+      prefs.dht = data.dht !== undefined ? !!data.dht : true;
+      prefs.pex = data.pex !== undefined ? !!data.pex : true;
+      prefs.lsd = data.lsd !== undefined ? !!data.lsd : true;
+      prefs.encryption = data.encryption !== undefined ? data.encryption : 0;
+      prefs.anonymous_mode = !!data.anonymous_mode;
+      prefs.queueing_enabled = !!data.queueing_enabled;
+      prefs.max_active_downloads = data.max_active_downloads !== undefined ? data.max_active_downloads : 3;
+      prefs.max_active_uploads = data.max_active_uploads !== undefined ? data.max_active_uploads : 3;
+      prefs.max_active_torrents = data.max_active_torrents !== undefined ? data.max_active_torrents : 5;
+      prefs.dont_count_slow_torrents = !!data.dont_count_slow_torrents;
+
       upLimitUnit.value = (prefs.up_limit > 0 && prefs.up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
       dlLimitUnit.value = (prefs.dl_limit > 0 && prefs.dl_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
       altUpLimitUnit.value = (prefs.alt_up_limit > 0 && prefs.alt_up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
@@ -2327,7 +2654,17 @@ async function updatePref(
     | 'proxy_port'
     | 'proxy_peer_connections'
     | 'proxy_username'
-    | 'proxy_password',
+    | 'proxy_password'
+    | 'dht'
+    | 'pex'
+    | 'lsd'
+    | 'encryption'
+    | 'anonymous_mode'
+    | 'queueing_enabled'
+    | 'max_active_downloads'
+    | 'max_active_uploads'
+    | 'max_active_torrents'
+    | 'dont_count_slow_torrents',
   value: boolean | string | number | Record<string, number | string>
 ) {
   savingPrefs.value = true;
@@ -2352,7 +2689,7 @@ function randomizePort() {
 }
 
 watch([activeTab, () => torrentStore.isConnected], async ([newTab, isConnected]) => {
-  if ((newTab === 'download' || newTab === 'speed' || newTab === 'connection') && (isConnected || appStore.simulationMode)) {
+  if ((newTab === 'download' || newTab === 'speed' || newTab === 'connection' || newTab === 'bittorrent') && (isConnected || appStore.simulationMode)) {
     await fetchServerPreferences();
   }
 }, { immediate: true });
