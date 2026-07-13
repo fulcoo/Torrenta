@@ -214,4 +214,73 @@ describe('QBittorrentAdapter', () => {
       expect(calledFormData.get('forced')).toBe('true');
     });
   });
+
+  describe('preferences', () => {
+    it('should retrieve preferences successfully', async () => {
+      const mockPrefs = {
+        preallocate_all: true,
+        incomplete_files_ext: false,
+        auto_tmm_enabled: true,
+        export_dir: '/backups',
+      };
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockPrefs });
+
+      const prefs = await adapter.getPreferences();
+      expect(prefs).toEqual(mockPrefs);
+      expect(api.get).toHaveBeenCalledWith('/app/preferences');
+    });
+
+    it('should set preferences successfully', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
+
+      const prefPayload = {
+        preallocate_all: true,
+        auto_tmm_enabled: true,
+        export_dir: '/backups',
+      };
+      const success = await adapter.setPreferences(prefPayload);
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/app/setPreferences', expect.any(URLSearchParams), expect.any(Object));
+      
+      const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
+      expect(calledParams.get('json')).toBe(JSON.stringify(prefPayload));
+    });
+  });
+
+  describe('categories', () => {
+    it('should retrieve categories successfully', async () => {
+      const mockCats = {
+        Movies: { name: 'Movies', savePath: '/downloads/movies' },
+      };
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCats });
+
+      const categories = await adapter.getCategories();
+      expect(categories).toEqual(mockCats);
+      expect(api.get).toHaveBeenCalledWith('/torrents/categories');
+    });
+
+    it('should create category successfully', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
+
+      const success = await adapter.createCategory('Movies', '/downloads/movies');
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/createCategory', expect.any(URLSearchParams), expect.any(Object));
+
+      const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
+      expect(calledParams.get('category')).toBe('Movies');
+      expect(calledParams.get('savePath')).toBe('/downloads/movies');
+    });
+
+    it('should remove categories successfully', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
+
+      const success = await adapter.removeCategories(['Movies', 'Music']);
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/removeCategories', expect.any(URLSearchParams), expect.any(Object));
+
+      const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
+      expect(calledParams.get('categories')).toBe('Movies\nMusic');
+    });
+  });
 });
+

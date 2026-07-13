@@ -227,6 +227,40 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     );
   }
 
+  async function createCategory(name: string, savePath?: string): Promise<boolean> {
+    const cleanName = name.trim();
+    if (!cleanName) return false;
+
+    if (appStore.simulationMode) {
+      appStore.addCategory(cleanName);
+      return true;
+    }
+
+    if (!driver) return false;
+    const success = await driver.createCategory(cleanName, savePath);
+    if (success) {
+      appStore.addCategory(cleanName);
+    }
+    return success;
+  }
+
+  async function removeCategory(name: string): Promise<boolean> {
+    const cleanName = name.trim();
+    if (!cleanName) return false;
+
+    if (appStore.simulationMode) {
+      appStore.removeCategory(cleanName);
+      return true;
+    }
+
+    if (!driver) return false;
+    const success = await driver.removeCategories([cleanName]);
+    if (success) {
+      appStore.removeCategory(cleanName);
+    }
+    return success;
+  }
+
   const tags = computed(() => {
     const list = new Set<string>();
     torrents.value.forEach((t) => {
@@ -406,12 +440,18 @@ export const useTorrentStore = defineStore('torrentStore', () => {
             driver = DownloaderFactory.create(appStore.driverType);
           }
 
-          // Concurrency Guard: execute getTorrents, getGlobalState and getTags concurrently
-          const [rawList, rawStats, rawTags] = await Promise.all([
+          // Concurrency Guard: execute getTorrents, getGlobalState, getTags and getCategories concurrently
+          const [rawList, rawStats, rawTags, rawCategories] = await Promise.all([
             driver.getTorrents(),
             driver.getGlobalState(),
             driver.getTags(),
+            driver.getCategories(),
           ]);
+
+          // Reconcile categories from the server with appStore
+          if (rawCategories) {
+            appStore.syncCategories(Object.keys(rawCategories));
+          }
 
           const now = Date.now();
           // Cleanup expired pending states (> 4000ms)
@@ -680,6 +720,58 @@ export const useTorrentStore = defineStore('torrentStore', () => {
       await bootClient();
     }
     return success;
+  }
+
+  async function getPreferences(): Promise<Record<string, any>> {
+    if (appStore.simulationMode) {
+      return {
+        preallocate_all: safeStorage.getItem('torrenta_preallocate_all') === 'true',
+        incomplete_files_ext: safeStorage.getItem('torrenta_incomplete_files_ext') === 'true',
+        use_unwanted_folder: safeStorage.getItem('torrenta_use_unwanted_folder') === 'true',
+        auto_tmm_enabled: safeStorage.getItem('torrenta_auto_tmm_enabled') !== 'false', // Default to true or active TMM
+        torrent_changed_tmm_enabled: safeStorage.getItem('torrenta_torrent_changed_tmm_enabled') === 'true',
+        save_path_changed_tmm_enabled: safeStorage.getItem('torrenta_save_path_changed_tmm_enabled') === 'true',
+        category_changed_tmm_enabled: safeStorage.getItem('torrenta_category_changed_tmm_enabled') === 'true',
+        use_category_paths_in_manual_mode: safeStorage.getItem('torrenta_use_category_paths_in_manual_mode') === 'true',
+        export_dir: safeStorage.getItem('torrenta_export_dir') || '',
+        export_dir_fin: safeStorage.getItem('torrenta_export_dir_fin') || '',
+      };
+    }
+
+    if (!driver) {
+      throw new Error('Downloader client is not connected');
+    }
+
+    return await driver.getPreferences();
+  }
+
+  async function setPreferences(prefs: Record<string, any>): Promise<boolean> {
+    if (appStore.simulationMode) {
+      const keys = [
+        'preallocate_all',
+        'incomplete_files_ext',
+        'use_unwanted_folder',
+        'auto_tmm_enabled',
+        'torrent_changed_tmm_enabled',
+        'save_path_changed_tmm_enabled',
+        'category_changed_tmm_enabled',
+        'use_category_paths_in_manual_mode',
+        'export_dir',
+        'export_dir_fin',
+      ];
+      for (const key of keys) {
+        if (prefs[key] !== undefined) {
+          safeStorage.setItem(`torrenta_${key}`, String(prefs[key]));
+        }
+      }
+      return true;
+    }
+
+    if (!driver) {
+      throw new Error('Downloader client is not connected');
+    }
+
+    return await driver.setPreferences(prefs);
   }
 
   async function getTorrentProperties(id: string): Promise<TorrentProperties | null> {
@@ -1058,6 +1150,8 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     triggerSyncLoop,
     addCustomCategory,
     removeCustomCategory,
+    createCategory,
+    removeCategory,
     addCustomTag,
     removeCustomTag,
     pauseTorrents,
@@ -1067,6 +1161,8 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     resumeAll,
     addTorrents,
     changeCredentials,
+    getPreferences,
+    setPreferences,
     getTorrentProperties,
     forceStartTorrents,
     setTorrentsLocation,

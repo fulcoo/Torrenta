@@ -48,4 +48,10 @@ export interface DownloaderAdapter {
   removeTorrentTrackers(id: string, urls: string[]): Promise<boolean>;
   addTorrentTrackers(id: string, urls: string): Promise<boolean>;
   editTorrentTrackerTier(id: string, url: string, tier: number): Promise<boolean>;
+  getPreferences(): Promise<Record<string, any>>;
+  setPreferences(preferences: Record<string, any>): Promise<boolean>;
+  getCategories(): Promise<Record<string, any>>;
+  createCategory(name: string, savePath?: string): Promise<boolean>;
+  removeCategories(names: string[]): Promise<boolean>;
 }
+

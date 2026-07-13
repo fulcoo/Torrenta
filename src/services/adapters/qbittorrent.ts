@@ -492,6 +492,76 @@ export class QBittorrentAdapter implements DownloaderAdapter {
     }
   }
 
+  async getPreferences(): Promise<Record<string, any>> {
+    try {
+      const response = await api.get<Record<string, any>>('/app/preferences');
+      return response.data;
+    } catch (err) {
+      console.error('Failed to get qBittorrent preferences:', err);
+      throw err;
+    }
+  }
+
+  async setPreferences(preferences: Record<string, any>): Promise<boolean> {
+    try {
+      const params = new URLSearchParams();
+      params.append('json', JSON.stringify(preferences));
+
+      await api.post('/app/setPreferences', params, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to set qBittorrent preferences:', err);
+      throw err;
+    }
+  }
+
+  async getCategories(): Promise<Record<string, any>> {
+    try {
+      const response = await api.get<Record<string, any>>('/torrents/categories');
+      return response.data || {};
+    } catch (err) {
+      console.error('Failed to get qBittorrent categories:', err);
+      throw err;
+    }
+  }
+
+  async createCategory(name: string, savePath?: string): Promise<boolean> {
+    try {
+      const params = new URLSearchParams();
+      params.append('category', name);
+      if (savePath !== undefined) {
+        params.append('savePath', savePath);
+      }
+      await api.post('/torrents/createCategory', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      return true;
+    } catch (err) {
+      console.error(`Failed to create category ${name}:`, err);
+      return false;
+    }
+  }
+
+  async removeCategories(names: string[]): Promise<boolean> {
+    try {
+      const params = new URLSearchParams();
+      params.append('categories', names.join('\n'));
+      await api.post('/torrents/removeCategories', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed to remove categories:', err);
+      return false;
+    }
+  }
+
+
+
   /**
    * Helper mapping qBittorrent states cleanly.
    * State references:

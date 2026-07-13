@@ -499,7 +499,7 @@
                     </button>
                     <button 
                       type="button" 
-                      @click="appStore.removeCategory(cat.name)" 
+                      @click="torrentStore.removeCategory(cat.name)" 
                       class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6" 
                       :title="t('settings.removeCategory')"
                     >
@@ -530,6 +530,240 @@
             </div>
             <div v-else class="text-xs opacity-40 text-center py-8 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
               {{ t('settings.noCategories') }}
+            </div>
+          </div>
+
+          <div class="h-px bg-base-content/10 w-full"></div>
+
+          <!-- Disk & Extension Settings (Server Settings) -->
+          <div class="relative text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <HardDriveIcon class="h-5 w-5 text-accent animate-pulse" /> {{ t('settings.diskAndExtensionTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.diskAndExtensionDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5 relative">
+              <!-- Loading overlay when updating preferences -->
+              <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-xs font-bold">
+                  <span class="loading loading-spinner loading-xs text-primary"></span>
+                  <span>{{ t('settings.updatingPreferences') }}</span>
+                </div>
+              </div>
+
+              <!-- Disk Preallocation (preallocate_all) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.preallocate_all"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('preallocate_all', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.preallocateAll') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.preallocateAllDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Append .!qB to Incomplete Files (incomplete_files_ext) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.incomplete_files_ext"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('incomplete_files_ext', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.incompleteFilesExt') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.incompleteFilesExtDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Use Unwanted Folder (use_unwanted_folder) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.use_unwanted_folder"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('use_unwanted_folder', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.useUnwantedFolder') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.useUnwantedFolderDesc') }}</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div class="h-px bg-base-content/10 w-full"></div>
+
+          <!-- Save Path & TMM Settings (Server Settings) -->
+          <div class="relative text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <FolderIcon class="h-5 w-5 text-secondary" /> {{ t('settings.savePathAndTmmTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.savePathAndTmmDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5 relative">
+              <!-- Loading overlay when updating preferences -->
+              <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-xs font-bold">
+                  <span class="loading loading-spinner loading-xs text-primary"></span>
+                  <span>{{ t('settings.updatingPreferences') }}</span>
+                </div>
+              </div>
+
+              <!-- Default Torrent Management Mode (auto_tmm_enabled) -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.autoTmmEnabled') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.autoTmmEnabledDesc') }}</span>
+                </div>
+                <div class="w-full sm:max-w-[200px] shrink-0">
+                  <CustomSelect 
+                    :modelValue="prefs.auto_tmm_enabled ? 'Automatic' : 'Manual'" 
+                    @update:modelValue="(val: any) => updatePref('auto_tmm_enabled', val === 'Automatic')"
+                    :options="[
+                      { value: 'Automatic', label: t('settings.tmmModeAutomatic') },
+                      { value: 'Manual', label: t('settings.tmmModeManual') }
+                    ]"
+                    :disabled="savingPrefs"
+                  />
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- TMM Interaction: Torrent category/save path changes (torrent_changed_tmm_enabled) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.torrent_changed_tmm_enabled"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('torrent_changed_tmm_enabled', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.torrentChangedTmmEnabled') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.torrentChangedTmmEnabledDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- TMM Interaction: Default save path changes (save_path_changed_tmm_enabled) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.save_path_changed_tmm_enabled"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('save_path_changed_tmm_enabled', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.savePathChangedTmmEnabled') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.savePathChangedTmmEnabledDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- TMM Interaction: Category path changes (category_changed_tmm_enabled) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.category_changed_tmm_enabled"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('category_changed_tmm_enabled', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.categoryChangedTmmEnabled') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.categoryChangedTmmEnabledDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Keep category paths in manual mode (use_category_paths_in_manual_mode) -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.use_category_paths_in_manual_mode"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('use_category_paths_in_manual_mode', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.useCategoryPathsInManualMode') }}</span>
+                  <span class="text-[10px] opacity-50">{{ t('settings.useCategoryPathsInManualModeDesc') }}</span>
+                </div>
+              </label>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- export_dir (Save copy of torrent to) -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1 flex flex-col items-start gap-0.5">
+                  <span>{{ t('settings.exportDir') }}</span>
+                  <span class="text-[9px] font-normal opacity-50 lowercase text-left">{{ t('settings.exportDirDesc') }}</span>
+                </label>
+                <input
+                  :value="prefs.export_dir"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('export_dir', e.target.value)"
+                  type="text"
+                  :placeholder="t('settings.exportDirPlaceholder')"
+                  class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-xs h-10 px-3 border border-base-content/10"
+                />
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- export_dir_fin (Save completed torrent to) -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1 flex flex-col items-start gap-0.5">
+                  <span>{{ t('settings.exportDirFin') }}</span>
+                  <span class="text-[9px] font-normal opacity-50 lowercase text-left">{{ t('settings.exportDirFinDesc') }}</span>
+                </label>
+                <input
+                  :value="prefs.export_dir_fin"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('export_dir_fin', e.target.value)"
+                  type="text"
+                  :placeholder="t('settings.exportDirFinPlaceholder')"
+                  class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-xs h-10 px-3 border border-base-content/10"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -856,7 +1090,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import { useAppStore } from '@/stores/app';
 import CustomSelect from '@/components/CustomSelect.vue';
 import { useTorrentStore } from '@/stores/torrent';
@@ -961,6 +1195,77 @@ function getTabLabel(tab: 'general' | 'download' | 'connection' | 'simulation') 
     default: return '';
   }
 }
+
+const prefs = reactive({
+  preallocate_all: false,
+  incomplete_files_ext: false,
+  use_unwanted_folder: false,
+  auto_tmm_enabled: false,
+  torrent_changed_tmm_enabled: false,
+  save_path_changed_tmm_enabled: false,
+  category_changed_tmm_enabled: false,
+  use_category_paths_in_manual_mode: false,
+  export_dir: '',
+  export_dir_fin: '',
+});
+const savingPrefs = ref(false);
+
+async function fetchServerPreferences() {
+  if (!torrentStore.isConnected && !appStore.simulationMode) return;
+  try {
+    const data = await torrentStore.getPreferences();
+    if (data) {
+      prefs.preallocate_all = !!data.preallocate_all;
+      prefs.incomplete_files_ext = !!data.incomplete_files_ext;
+      prefs.use_unwanted_folder = !!data.use_unwanted_folder;
+      prefs.auto_tmm_enabled = !!data.auto_tmm_enabled;
+      prefs.torrent_changed_tmm_enabled = !!data.torrent_changed_tmm_enabled;
+      prefs.save_path_changed_tmm_enabled = !!data.save_path_changed_tmm_enabled;
+      prefs.category_changed_tmm_enabled = !!data.category_changed_tmm_enabled;
+      prefs.use_category_paths_in_manual_mode = !!data.use_category_paths_in_manual_mode;
+      prefs.export_dir = data.export_dir || '';
+      prefs.export_dir_fin = data.export_dir_fin || '';
+    }
+  } catch (err) {
+    console.error('Failed to load server preferences:', err);
+  }
+}
+
+async function updatePref(
+  key:
+    | 'preallocate_all'
+    | 'incomplete_files_ext'
+    | 'use_unwanted_folder'
+    | 'auto_tmm_enabled'
+    | 'torrent_changed_tmm_enabled'
+    | 'save_path_changed_tmm_enabled'
+    | 'category_changed_tmm_enabled'
+    | 'use_category_paths_in_manual_mode'
+    | 'export_dir'
+    | 'export_dir_fin',
+  value: boolean | string
+) {
+  savingPrefs.value = true;
+  try {
+    const success = await torrentStore.setPreferences({ [key]: value });
+    if (success) {
+      (prefs as any)[key] = value;
+    } else {
+      alert(t('settings.updatePreferencesFailed', { error: 'Unknown error' }));
+    }
+  } catch (err: any) {
+    alert(t('settings.updatePreferencesFailed', { error: err.message || err }));
+    await fetchServerPreferences();
+  } finally {
+    savingPrefs.value = false;
+  }
+}
+
+watch([activeTab, () => torrentStore.isConnected], async ([newTab, isConnected]) => {
+  if (newTab === 'download' && (isConnected || appStore.simulationMode)) {
+    await fetchServerPreferences();
+  }
+}, { immediate: true });
 const newCategoryInput = ref('');
 const showCreateCategoryModal = ref(false);
 
@@ -973,10 +1278,10 @@ function openCreateCategoryModal() {
   showCreateCategoryModal.value = true;
 }
 
-function submitCreateCategory() {
+async function submitCreateCategory() {
   const name = newCategoryInput.value.trim();
   if (name) {
-    appStore.addCategory(name);
+    await torrentStore.createCategory(name);
   }
   showCreateCategoryModal.value = false;
 }

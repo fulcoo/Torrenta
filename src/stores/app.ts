@@ -86,6 +86,28 @@ export const useAppStore = defineStore('appStore', () => {
     saveCategoryConfigs();
   }
 
+  function syncCategories(serverNames: string[]) {
+    let changed = false;
+    // 1. Add missing categories
+    serverNames.forEach((name) => {
+      if (!categoryConfigs.value.some((c) => c.name === name)) {
+        categoryConfigs.value.push({ name, paths: [] });
+        changed = true;
+      }
+    });
+
+    // 2. Remove categories that don't exist on the server anymore
+    const beforeCount = categoryConfigs.value.length;
+    categoryConfigs.value = categoryConfigs.value.filter((c) => serverNames.includes(c.name));
+    if (categoryConfigs.value.length !== beforeCount) {
+      changed = true;
+    }
+
+    if (changed) {
+      saveCategoryConfigs();
+    }
+  }
+
   function addPathToCategory(catName: string, path: string) {
     const cleanPath = path.trim();
     const cat = categoryConfigs.value.find((c) => c.name === catName);
@@ -215,6 +237,7 @@ export const useAppStore = defineStore('appStore', () => {
     setLocale,
     addCategory,
     removeCategory,
+    syncCategories,
     addPathToCategory,
     removePathFromCategory,
     addToTopOfQueue,
