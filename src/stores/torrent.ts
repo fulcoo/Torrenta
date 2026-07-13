@@ -747,6 +747,19 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         schedule_to_hour: parseInt(safeStorage.getItem('torrenta_schedule_to_hour') || '20'),
         schedule_to_min: parseInt(safeStorage.getItem('torrenta_schedule_to_min') || '0'),
         scheduler_days: parseInt(safeStorage.getItem('torrenta_scheduler_days') || '0'),
+        bittorrent_protocol: parseInt(safeStorage.getItem('torrenta_bittorrent_protocol') || '0'),
+        listen_port: parseInt(safeStorage.getItem('torrenta_listen_port') || '45682'),
+        upnp: safeStorage.getItem('torrenta_upnp') !== 'false', // Default to true
+        max_connec: parseInt(safeStorage.getItem('torrenta_max_connec') || '500'),
+        max_connec_per_torrent: parseInt(safeStorage.getItem('torrenta_max_connec_per_torrent') || '100'),
+        max_uploads: parseInt(safeStorage.getItem('torrenta_max_uploads') || '80'),
+        max_uploads_per_torrent: parseInt(safeStorage.getItem('torrenta_max_uploads_per_torrent') || '20'),
+        proxy_type: parseInt(safeStorage.getItem('torrenta_proxy_type') || '-1'),
+        proxy_ip: safeStorage.getItem('torrenta_proxy_ip') || '',
+        proxy_port: parseInt(safeStorage.getItem('torrenta_proxy_port') || '8080'),
+        proxy_peer_connections: safeStorage.getItem('torrenta_proxy_peer_connections') === 'true',
+        proxy_username: safeStorage.getItem('torrenta_proxy_username') || '',
+        proxy_password: safeStorage.getItem('torrenta_proxy_password') || '',
       };
     }
 
@@ -781,6 +794,19 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         'schedule_to_hour',
         'schedule_to_min',
         'scheduler_days',
+        'bittorrent_protocol',
+        'listen_port',
+        'upnp',
+        'max_connec',
+        'max_connec_per_torrent',
+        'max_uploads',
+        'max_uploads_per_torrent',
+        'proxy_type',
+        'proxy_ip',
+        'proxy_port',
+        'proxy_peer_connections',
+        'proxy_username',
+        'proxy_password',
       ];
       for (const key of keys) {
         if (prefs[key] !== undefined) {

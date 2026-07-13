@@ -1306,202 +1306,594 @@
         </div>
 
         <!-- 3. Connection Panel -->
-        <div v-if="activeTab === 'connection'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
-          <!-- Connection Parameters -->
-          <div class="text-left flex flex-col gap-4">
-            <div class="flex flex-col gap-1">
-              <h2 class="text-base font-bold flex items-center gap-2">
-                <RadioIcon class="h-5 w-5 text-primary" /> {{ t('settings.connParams') }}
-              </h2>
-            </div>
-
-            <div class="flex flex-col gap-4">
-              <!-- Downloader Driver Type -->
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.clientType') }}</span>
-                <div class="w-full sm:max-w-xs shrink-0">
-                  <CustomSelect v-model="form.driverType" :options="driverOptions" />
-                </div>
+        <div v-if="activeTab === 'connection'" class="flex flex-col gap-6">
+          <!-- Local Connection Settings Card -->
+          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+            <!-- Connection Parameters -->
+            <div class="text-left flex flex-col gap-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <RadioIcon class="h-5 w-5 text-primary" /> {{ t('settings.connParams') }}
+                </h2>
               </div>
 
-              <!-- Endpoint URL -->
-              <div class="form-control w-full">
-                <label class="label font-bold text-xs uppercase opacity-75 justify-between">
-                  <span>{{ t('settings.webUiUrl') }}</span>
-                  <span class="text-[10px] lowercase text-primary font-normal">{{ t('settings.autoDetect') }}</span>
-                </label>
-                <input
-                  v-model="form.url"
-                  type="text"
-                  placeholder="e.g. http://192.168.1.100:8080 or leave blank"
-                  class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary font-mono text-sm h-11 px-4 border border-base-content/10"
-                />
-                <p class="text-[10px] opacity-50 mt-1">
-                  {{ t('settings.urlTip') }}
+              <div class="flex flex-col gap-4">
+                <!-- Downloader Driver Type -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.clientType') }}</span>
+                  <div class="w-full sm:max-w-xs shrink-0">
+                    <CustomSelect v-model="form.driverType" :options="driverOptions" />
+                  </div>
+                </div>
+
+                <!-- Endpoint URL -->
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75 justify-between">
+                    <span>{{ t('settings.webUiUrl') }}</span>
+                    <span class="text-[10px] lowercase text-primary font-normal">{{ t('settings.autoDetect') }}</span>
+                  </label>
+                  <input
+                    v-model="form.url"
+                    type="text"
+                    placeholder="e.g. http://192.168.1.100:8080 or leave blank"
+                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary font-mono text-sm h-11 px-4 border border-base-content/10"
+                  />
+                  <p class="text-[10px] opacity-50 mt-1">
+                    {{ t('settings.urlTip') }}
+                  </p>
+                </div>
+
+                <!-- Credentials -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.username') }}</label>
+                    <input
+                      v-model="form.username"
+                      type="text"
+                      placeholder="admin"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 px-4 border border-base-content/10"
+                    />
+                  </div>
+
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.password') }}</label>
+                    <input
+                      v-model="form.password"
+                      type="password"
+                      placeholder="••••••••"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 px-4 border border-base-content/10"
+                    />
+                  </div>
+                </div>
+
+                <!-- Action Triggers -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-content/10">
+                  <div class="flex items-center gap-2">
+                    <!-- Test Connection status badge -->
+                    <span v-if="testStatus === 'success'" class="badge badge-success font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl">
+                      <CheckCircle2Icon class="h-4 w-4" /> {{ t('settings.connSuccess') }}
+                    </span>
+                    <span v-else-if="testStatus === 'error'" class="badge badge-error font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl">
+                      <XCircleIcon class="h-4 w-4" /> {{ t('settings.connFailed') }}
+                    </span>
+                    <span v-else-if="testStatus === 'testing'" class="loading loading-ring loading-md text-primary"></span>
+                  </div>
+
+                  <div class="flex gap-2">
+                    <button @click="testConnection" :disabled="testStatus === 'testing'" class="btn btn-neutral btn-sm rounded-xl font-bold">
+                      {{ t('settings.testConn') }}
+                    </button>
+                    <button @click="saveSettings" :disabled="testStatus === 'testing'" class="btn btn-primary btn-sm rounded-xl font-bold shadow-lg shadow-primary/20">
+                      {{ t('common.save') }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Connection error logs details -->
+                <div v-if="testStatus === 'error' && errorLog" class="p-3 bg-error/10 border border-error/20 rounded-xl text-xs font-mono text-error break-all">
+                  {{ errorLog }}
+                </div>
+
+                <!-- Warnings / Tips Inside Connection Parameters -->
+                <div class="h-px bg-base-content/10 my-2"></div>
+                
+                <div class="flex flex-col gap-3">
+                  <!-- Standard WebUI Alert -->
+                  <div class="bg-primary/5 border border-primary/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
+                    <h4 class="font-extrabold flex items-center gap-1.5 text-primary uppercase tracking-wider">
+                      <LayersIcon class="h-4 w-4" /> {{ t('settings.webuiModeTitle') }}
+                    </h4>
+                    <p class="leading-relaxed opacity-80">
+                      {{ t('settings.webuiModeDesc') }}
+                    </p>
+                  </div>
+
+                  <!-- CORS Tips -->
+                  <div class="bg-warning/5 border border-warning/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
+                    <h4 class="font-extrabold flex items-center gap-1.5 text-warning uppercase tracking-wider">
+                      <ShieldAlertIcon class="h-4 w-4" /> {{ t('settings.corsTitle') }}
+                    </h4>
+                    <p class="leading-relaxed opacity-80 font-semibold">
+                      {{ t('settings.corsDesc') }}
+                    </p>
+                  </div>
+
+                  <!-- SameSite Cookie Info -->
+                  <div class="bg-info/5 border border-info/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
+                    <h4 class="font-extrabold flex items-center gap-1.5 text-info uppercase tracking-wider">
+                      <CookieIcon class="h-4 w-4" /> {{ t('settings.samesiteTitle') }}
+                    </h4>
+                    <p class="leading-relaxed opacity-80">
+                      {{ t('settings.samesiteDesc') }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="h-px bg-base-content/10 w-full"></div>
+
+            <!-- Change Downloader WebUI Credentials -->
+            <div class="text-left flex flex-col gap-4">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <KeyRoundIcon class="h-5 w-5 text-secondary animate-pulse" /> {{ t('settings.changeCredentialsTitle') }}
+                </h2>
+                <p class="text-xs opacity-60 leading-relaxed">
+                  {{ t('settings.changeCredentialsDesc') }}
                 </p>
               </div>
 
-              <!-- Credentials -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div class="form-control w-full">
-                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.username') }}</label>
-                  <input
-                    v-model="form.username"
-                    type="text"
-                    placeholder="admin"
-                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 px-4 border border-base-content/10"
-                  />
+              <form @submit.prevent="handleChangeCredentials" class="flex flex-col gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <!-- New Username -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.newUsername') }}</label>
+                    <input
+                      v-model="changeCredForm.username"
+                      type="text"
+                      required
+                      placeholder="admin"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
+                    />
+                  </div>
+
+                  <!-- New Password -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.newPassword') }}</label>
+                    <input
+                      v-model="changeCredForm.password"
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
+                    />
+                  </div>
+
+                  <!-- Confirm Password -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.confirmPassword') }}</label>
+                    <input
+                      v-model="changeCredForm.confirmPassword"
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
+                    />
+                  </div>
                 </div>
 
-                <div class="form-control w-full">
-                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.password') }}</label>
-                  <input
-                    v-model="form.password"
-                    type="password"
-                    placeholder="••••••••"
-                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 px-4 border border-base-content/10"
-                  />
-                </div>
-              </div>
+                <!-- Action buttons & messages -->
+                <div class="flex flex-wrap items-center justify-between gap-4 mt-2 pt-4 border-t border-base-content/10">
+                  <div class="flex items-center gap-2">
+                    <span v-if="changeCredStatus === 'success'" class="badge badge-success font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl animate-fadeIn">
+                      <CheckCircle2Icon class="h-4 w-4" /> {{ t('settings.credentialsChanged') }}
+                    </span>
+                    <span v-else-if="changeCredStatus === 'error'" class="badge badge-error font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl animate-fadeIn">
+                      <XCircleIcon class="h-4 w-4" /> {{ changeCredError || t('settings.credentialsChangeFailed') }}
+                    </span>
+                    <span v-else-if="changeCredStatus === 'loading'" class="loading loading-ring loading-md text-secondary"></span>
+                  </div>
 
-              <!-- Action Triggers -->
-              <div class="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-base-content/10">
-                <div class="flex items-center gap-2">
-                  <!-- Test Connection status badge -->
-                  <span v-if="testStatus === 'success'" class="badge badge-success font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl">
-                    <CheckCircle2Icon class="h-4 w-4" /> {{ t('settings.connSuccess') }}
-                  </span>
-                  <span v-else-if="testStatus === 'error'" class="badge badge-error font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl">
-                    <XCircleIcon class="h-4 w-4" /> {{ t('settings.connFailed') }}
-                  </span>
-                  <span v-else-if="testStatus === 'testing'" class="loading loading-ring loading-md text-primary"></span>
-                </div>
-
-                <div class="flex gap-2">
-                  <button @click="testConnection" :disabled="testStatus === 'testing'" class="btn btn-neutral btn-sm rounded-xl font-bold">
-                    {{ t('settings.testConn') }}
+                  <button 
+                    type="submit" 
+                    :disabled="changeCredStatus === 'loading'" 
+                    class="btn btn-secondary btn-sm rounded-xl font-bold shadow-lg shadow-secondary/20 ml-auto"
+                  >
+                    {{ t('settings.btnChange') }}
                   </button>
-                  <button @click="saveSettings" :disabled="testStatus === 'testing'" class="btn btn-primary btn-sm rounded-xl font-bold shadow-lg shadow-primary/20">
-                    {{ t('common.save') }}
-                  </button>
                 </div>
-              </div>
-
-              <!-- Connection error logs details -->
-              <div v-if="testStatus === 'error' && errorLog" class="p-3 bg-error/10 border border-error/20 rounded-xl text-xs font-mono text-error break-all">
-                {{ errorLog }}
-              </div>
-
-              <!-- Warnings / Tips Inside Connection Parameters -->
-              <div class="h-px bg-base-content/10 my-2"></div>
-              
-              <div class="flex flex-col gap-3">
-                <!-- Standard WebUI Alert -->
-                <div class="bg-primary/5 border border-primary/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
-                  <h4 class="font-extrabold flex items-center gap-1.5 text-primary uppercase tracking-wider">
-                    <LayersIcon class="h-4 w-4" /> {{ t('settings.webuiModeTitle') }}
-                  </h4>
-                  <p class="leading-relaxed opacity-80">
-                    {{ t('settings.webuiModeDesc') }}
-                  </p>
-                </div>
-
-                <!-- CORS Tips -->
-                <div class="bg-warning/5 border border-warning/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
-                  <h4 class="font-extrabold flex items-center gap-1.5 text-warning uppercase tracking-wider">
-                    <ShieldAlertIcon class="h-4 w-4" /> {{ t('settings.corsTitle') }}
-                  </h4>
-                  <p class="leading-relaxed opacity-80 font-semibold">
-                    {{ t('settings.corsDesc') }}
-                  </p>
-                </div>
-
-                <!-- SameSite Cookie Info -->
-                <div class="bg-info/5 border border-info/20 p-4 rounded-xl flex flex-col gap-1.5 text-xs text-left">
-                  <h4 class="font-extrabold flex items-center gap-1.5 text-info uppercase tracking-wider">
-                    <CookieIcon class="h-4 w-4" /> {{ t('settings.samesiteTitle') }}
-                  </h4>
-                  <p class="leading-relaxed opacity-80">
-                    {{ t('settings.samesiteDesc') }}
-                  </p>
-                </div>
-              </div>
+              </form>
             </div>
           </div>
 
-          <div class="h-px bg-base-content/10 w-full"></div>
-
-          <!-- Change Downloader WebUI Credentials -->
-          <div class="text-left flex flex-col gap-4">
-            <div class="flex flex-col gap-1">
-              <h2 class="text-base font-bold flex items-center gap-2">
-                <KeyRoundIcon class="h-5 w-5 text-secondary animate-pulse" /> {{ t('settings.changeCredentialsTitle') }}
-              </h2>
-              <p class="text-xs opacity-60 leading-relaxed">
-                {{ t('settings.changeCredentialsDesc') }}
-              </p>
+          <!-- Downloader Server Connection Performance Card -->
+          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+            <!-- Loading overlay when updating preferences -->
+            <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
+              <div class="flex items-center gap-2 text-xs font-bold">
+                <span class="loading loading-spinner loading-xs text-primary"></span>
+                <span>{{ t('settings.updatingPreferences') }}</span>
+              </div>
             </div>
 
-            <form @submit.prevent="handleChangeCredentials" class="flex flex-col gap-4">
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <!-- New Username -->
-                <div class="form-control w-full">
-                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.newUsername') }}</label>
-                  <input
-                    v-model="changeCredForm.username"
-                    type="text"
-                    required
-                    placeholder="admin"
-                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
-                  />
-                </div>
+            <!-- Header -->
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <GlobeIcon class="h-5 w-5 text-primary" /> {{ t('settings.serverConnTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.serverConnDesc') }}</span>
+            </div>
 
-                <!-- New Password -->
-                <div class="form-control w-full">
-                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.newPassword') }}</label>
-                  <input
-                    v-model="changeCredForm.password"
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
-                  />
-                </div>
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
 
-                <!-- Confirm Password -->
-                <div class="form-control w-full">
-                  <label class="label font-bold text-xs uppercase opacity-75">{{ t('settings.confirmPassword') }}</label>
-                  <input
-                    v-model="changeCredForm.confirmPassword"
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-sm h-11 px-4 border border-base-content/10"
+            <div v-else class="flex flex-col gap-4">
+              <!-- BitTorrent Protocol Selection -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.bittorrentProtocolLabel') }}</span>
+                <div class="w-full sm:max-w-xs shrink-0">
+                  <CustomSelect
+                    :modelValue="prefs.bittorrent_protocol"
+                    @update:modelValue="(val: any) => updatePref('bittorrent_protocol', parseInt(val))"
+                    :options="[
+                      { value: 0, label: t('settings.bittorrentProtocolOptions.all') },
+                      { value: 1, label: t('settings.bittorrentProtocolOptions.tcp') },
+                      { value: 2, label: t('settings.bittorrentProtocolOptions.utp') }
+                    ]"
+                    :disabled="savingPrefs"
                   />
                 </div>
               </div>
 
-              <!-- Action buttons & messages -->
-              <div class="flex flex-wrap items-center justify-between gap-4 mt-2 pt-4 border-t border-base-content/10">
-                <div class="flex items-center gap-2">
-                  <span v-if="changeCredStatus === 'success'" class="badge badge-success font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl animate-fadeIn">
-                    <CheckCircle2Icon class="h-4 w-4" /> {{ t('settings.credentialsChanged') }}
-                  </span>
-                  <span v-else-if="changeCredStatus === 'error'" class="badge badge-error font-semibold gap-1.5 py-3.5 px-3.5 rounded-xl animate-fadeIn">
-                    <XCircleIcon class="h-4 w-4" /> {{ changeCredError || t('settings.credentialsChangeFailed') }}
-                  </span>
-                  <span v-else-if="changeCredStatus === 'loading'" class="loading loading-ring loading-md text-secondary"></span>
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Listening Port -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                  <span>{{ t('settings.listenPortLabel') }}</span>
+                </label>
+                <div class="flex items-center gap-2 w-full">
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="prefs.listen_port"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('listen_port', Math.max(1, Math.min(65535, parseInt(e.target.value || '1'))))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="updatePref('listen_port', Math.min(65535, prefs.listen_port + 1))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="updatePref('listen_port', Math.max(1, prefs.listen_port - 1))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click="randomizePort"
+                    :disabled="savingPrefs"
+                    class="btn btn-neutral h-10 min-h-0 rounded-xl px-4 text-xs font-bold font-mono"
+                  >
+                    {{ t('settings.randomPortBtn') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- UPnP Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none mt-2">
+                <input
+                  :checked="prefs.upnp"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('upnp', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableUpnp') }}</span>
+                </div>
+              </label>
+
+              <!-- Connection Limits Section -->
+              <div class="h-px bg-base-content/10 my-3 w-full"></div>
+
+              <div class="flex flex-col gap-1">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                  <SlidersIcon class="h-4.5 w-4.5 text-secondary" /> {{ t('settings.connLimitsTitle') }}
+                </h3>
+              </div>
+
+              <!-- Limits inputs grid -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Max connection -->
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                    <span>{{ t('settings.maxConnecLabel') }}</span>
+                  </label>
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="prefs.max_connec"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('max_connec', Math.max(0, parseInt(e.target.value || '0')))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="updatePref('max_connec', prefs.max_connec + 10)"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="updatePref('max_connec', Math.max(0, prefs.max_connec - 10))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                <button 
-                  type="submit" 
-                  :disabled="changeCredStatus === 'loading'" 
-                  class="btn btn-secondary btn-sm rounded-xl font-bold shadow-lg shadow-secondary/20 ml-auto"
-                >
-                  {{ t('settings.btnChange') }}
-                </button>
+                <!-- Max connection per torrent -->
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                    <span>{{ t('settings.maxConnecPerTorrentLabel') }}</span>
+                  </label>
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="prefs.max_connec_per_torrent"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('max_connec_per_torrent', Math.max(0, parseInt(e.target.value || '0')))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="updatePref('max_connec_per_torrent', prefs.max_connec_per_torrent + 5)"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="updatePref('max_connec_per_torrent', Math.max(0, prefs.max_connec_per_torrent - 5))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Max uploads -->
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                    <span>{{ t('settings.maxUploadsLabel') }}</span>
+                  </label>
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="prefs.max_uploads"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('max_uploads', Math.max(0, parseInt(e.target.value || '0')))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="updatePref('max_uploads', prefs.max_uploads + 5)"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="updatePref('max_uploads', Math.max(0, prefs.max_uploads - 5))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Max uploads per torrent -->
+                <div class="form-control w-full">
+                  <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                    <span>{{ t('settings.maxUploadsPerTorrentLabel') }}</span>
+                  </label>
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="prefs.max_uploads_per_torrent"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('max_uploads_per_torrent', Math.max(0, parseInt(e.target.value || '0')))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="updatePref('max_uploads_per_torrent', prefs.max_uploads_per_torrent + 2)"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="updatePref('max_uploads_per_torrent', Math.max(0, prefs.max_uploads_per_torrent - 2))"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </form>
+
+              <!-- Proxy Settings Section -->
+              <div class="h-px bg-base-content/10 my-3 w-full"></div>
+
+              <div class="flex flex-col gap-1">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                  <InboxIcon class="h-4.5 w-4.5 text-primary" /> {{ t('settings.proxySettingsTitle') }}
+                </h3>
+              </div>
+
+              <!-- Proxy Type -->
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.proxyTypeLabel') }}</span>
+                <div class="w-full sm:max-w-xs shrink-0">
+                  <CustomSelect
+                    :modelValue="prefs.proxy_type"
+                    @update:modelValue="(val: any) => updatePref('proxy_type', parseInt(val))"
+                    :options="[
+                      { value: -1, label: t('settings.proxyTypeOptions.none') },
+                      { value: 1, label: t('settings.proxyTypeOptions.httpNoAuth') },
+                      { value: 3, label: t('settings.proxyTypeOptions.httpAuth') },
+                      { value: 2, label: t('settings.proxyTypeOptions.socks5NoAuth') },
+                      { value: 4, label: t('settings.proxyTypeOptions.socks5Auth') },
+                      { value: 5, label: t('settings.proxyTypeOptions.socks4NoAuth') }
+                    ]"
+                    :disabled="savingPrefs"
+                  />
+                </div>
+              </div>
+
+              <!-- Conditional proxy configuration fields -->
+              <div v-if="prefs.proxy_type !== -1" class="flex flex-col gap-4 bg-base-200/35 p-4 rounded-xl border border-base-content/5 mt-2 animate-fadeIn">
+                <!-- Host & Port -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <!-- Host -->
+                  <div class="form-control w-full sm:col-span-2">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.proxyIpLabel') }}</span>
+                    </label>
+                    <input
+                      :value="prefs.proxy_ip"
+                      @change="(e: any) => updatePref('proxy_ip', e.target.value.trim())"
+                      type="text"
+                      placeholder="e.g. proxy.example.com or 12.34.56.78"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 px-3 border border-base-content/10"
+                    />
+                  </div>
+
+                  <!-- Port -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.proxyPortLabel') }}</span>
+                    </label>
+                    <input
+                      :value="prefs.proxy_port"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => updatePref('proxy_port', Math.max(1, Math.min(65535, parseInt(e.target.value || '8080'))))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 px-3 border border-base-content/10"
+                    />
+                  </div>
+                </div>
+
+                <!-- Toggle for peer connections -->
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    :checked="prefs.proxy_peer_connections"
+                    :disabled="savingPrefs"
+                    @change="(e: any) => updatePref('proxy_peer_connections', e.target.checked)"
+                    type="checkbox"
+                    class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                  />
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-xs font-bold text-base-content">{{ t('settings.proxyPeerConnectionsLabel') }}</span>
+                  </div>
+                </label>
+
+                <!-- Conditional authentication fields -->
+                <div v-if="prefs.proxy_type === 3 || prefs.proxy_type === 4" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2 border-t border-base-content/5 pt-4 animate-fadeIn">
+                  <!-- Username -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.proxyUsernameLabel') }}</span>
+                    </label>
+                    <input
+                      :value="prefs.proxy_username"
+                      @change="(e: any) => updatePref('proxy_username', e.target.value.trim())"
+                      type="text"
+                      placeholder="Username"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 px-3 border border-base-content/10"
+                    />
+                  </div>
+
+                  <!-- Password -->
+                  <div class="form-control w-full">
+                    <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                      <span>{{ t('settings.proxyPasswordLabel') }}</span>
+                    </label>
+                    <input
+                      :value="prefs.proxy_password"
+                      @change="(e: any) => updatePref('proxy_password', e.target.value)"
+                      type="password"
+                      placeholder="••••••••"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 px-3 border border-base-content/10"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1764,6 +2156,19 @@ const prefs = reactive({
   schedule_to_hour: 0,
   schedule_to_min: 0,
   scheduler_days: 0,
+  bittorrent_protocol: 0,
+  listen_port: 0,
+  upnp: false,
+  max_connec: 0,
+  max_connec_per_torrent: 0,
+  max_uploads: 0,
+  max_uploads_per_torrent: 0,
+  proxy_type: -1,
+  proxy_ip: '',
+  proxy_port: 0,
+  proxy_peer_connections: false,
+  proxy_username: '',
+  proxy_password: '',
 });
 const savingPrefs = ref(false);
 
@@ -1862,6 +2267,20 @@ async function fetchServerPreferences() {
       prefs.schedule_to_min = data.schedule_to_min !== undefined ? data.schedule_to_min : 0;
       prefs.scheduler_days = data.scheduler_days !== undefined ? data.scheduler_days : 0;
 
+      prefs.bittorrent_protocol = data.bittorrent_protocol !== undefined ? data.bittorrent_protocol : 0;
+      prefs.listen_port = data.listen_port !== undefined ? data.listen_port : 0;
+      prefs.upnp = !!data.upnp;
+      prefs.max_connec = data.max_connec !== undefined ? data.max_connec : 500;
+      prefs.max_connec_per_torrent = data.max_connec_per_torrent !== undefined ? data.max_connec_per_torrent : 100;
+      prefs.max_uploads = data.max_uploads !== undefined ? data.max_uploads : 80;
+      prefs.max_uploads_per_torrent = data.max_uploads_per_torrent !== undefined ? data.max_uploads_per_torrent : 20;
+      prefs.proxy_type = data.proxy_type !== undefined ? data.proxy_type : -1;
+      prefs.proxy_ip = data.proxy_ip || '';
+      prefs.proxy_port = data.proxy_port !== undefined ? data.proxy_port : 8080;
+      prefs.proxy_peer_connections = !!data.proxy_peer_connections;
+      prefs.proxy_username = data.proxy_username || '';
+      prefs.proxy_password = data.proxy_password || '';
+
       upLimitUnit.value = (prefs.up_limit > 0 && prefs.up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
       dlLimitUnit.value = (prefs.dl_limit > 0 && prefs.dl_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
       altUpLimitUnit.value = (prefs.alt_up_limit > 0 && prefs.alt_up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
@@ -1895,7 +2314,20 @@ async function updatePref(
     | 'schedule_from_min'
     | 'schedule_to_hour'
     | 'schedule_to_min'
-    | 'scheduler_days',
+    | 'scheduler_days'
+    | 'bittorrent_protocol'
+    | 'listen_port'
+    | 'upnp'
+    | 'max_connec'
+    | 'max_connec_per_torrent'
+    | 'max_uploads'
+    | 'max_uploads_per_torrent'
+    | 'proxy_type'
+    | 'proxy_ip'
+    | 'proxy_port'
+    | 'proxy_peer_connections'
+    | 'proxy_username'
+    | 'proxy_password',
   value: boolean | string | number | Record<string, number | string>
 ) {
   savingPrefs.value = true;
@@ -1914,8 +2346,13 @@ async function updatePref(
   }
 }
 
+function randomizePort() {
+  const port = Math.floor(Math.random() * (65535 - 1024 + 1)) + 1024;
+  updatePref('listen_port', port);
+}
+
 watch([activeTab, () => torrentStore.isConnected], async ([newTab, isConnected]) => {
-  if ((newTab === 'download' || newTab === 'speed') && (isConnected || appStore.simulationMode)) {
+  if ((newTab === 'download' || newTab === 'speed' || newTab === 'connection') && (isConnected || appStore.simulationMode)) {
     await fetchServerPreferences();
   }
 }, { immediate: true });

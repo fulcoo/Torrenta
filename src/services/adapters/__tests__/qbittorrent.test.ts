@@ -232,6 +232,19 @@ describe('QBittorrentAdapter', () => {
         schedule_to_hour: 20,
         schedule_to_min: 0,
         scheduler_days: 0,
+        bittorrent_protocol: 0,
+        listen_port: 45682,
+        upnp: true,
+        max_connec: 500,
+        max_connec_per_torrent: 100,
+        max_uploads: 80,
+        max_uploads_per_torrent: 20,
+        proxy_type: -1,
+        proxy_ip: '',
+        proxy_port: 8080,
+        proxy_peer_connections: false,
+        proxy_username: '',
+        proxy_password: '',
       };
       vi.mocked(api.get).mockResolvedValueOnce({ data: mockPrefs });
 
@@ -257,6 +270,19 @@ describe('QBittorrentAdapter', () => {
         schedule_to_hour: 20,
         schedule_to_min: 0,
         scheduler_days: 0,
+        bittorrent_protocol: 0,
+        listen_port: 45682,
+        upnp: true,
+        max_connec: 500,
+        max_connec_per_torrent: 100,
+        max_uploads: 80,
+        max_uploads_per_torrent: 20,
+        proxy_type: -1,
+        proxy_ip: '',
+        proxy_port: 8080,
+        proxy_peer_connections: false,
+        proxy_username: '',
+        proxy_password: '',
       };
       const success = await adapter.setPreferences(prefPayload);
       expect(success).toBe(true);
