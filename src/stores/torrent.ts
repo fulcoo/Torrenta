@@ -735,6 +735,18 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         use_category_paths_in_manual_mode: safeStorage.getItem('torrenta_use_category_paths_in_manual_mode') === 'true',
         export_dir: safeStorage.getItem('torrenta_export_dir') || '',
         export_dir_fin: safeStorage.getItem('torrenta_export_dir_fin') || '',
+        download_in_scan_dirs: safeStorage.getItem('torrenta_download_in_scan_dirs') === 'true',
+        scan_dirs: safeStorage.getJSON('torrenta_scan_dirs', {}),
+        up_limit: parseInt(safeStorage.getItem('torrenta_up_limit') || '0'),
+        dl_limit: parseInt(safeStorage.getItem('torrenta_dl_limit') || '0'),
+        alt_up_limit: parseInt(safeStorage.getItem('torrenta_alt_up_limit') || '51200'), // Default 50 KiB/s
+        alt_dl_limit: parseInt(safeStorage.getItem('torrenta_alt_dl_limit') || '102400'), // Default 100 KiB/s
+        scheduler_enabled: safeStorage.getItem('torrenta_scheduler_enabled') === 'true',
+        schedule_from_hour: parseInt(safeStorage.getItem('torrenta_schedule_from_hour') || '8'),
+        schedule_from_min: parseInt(safeStorage.getItem('torrenta_schedule_from_min') || '0'),
+        schedule_to_hour: parseInt(safeStorage.getItem('torrenta_schedule_to_hour') || '20'),
+        schedule_to_min: parseInt(safeStorage.getItem('torrenta_schedule_to_min') || '0'),
+        scheduler_days: parseInt(safeStorage.getItem('torrenta_scheduler_days') || '0'),
       };
     }
 
@@ -758,11 +770,25 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         'use_category_paths_in_manual_mode',
         'export_dir',
         'export_dir_fin',
+        'download_in_scan_dirs',
+        'up_limit',
+        'dl_limit',
+        'alt_up_limit',
+        'alt_dl_limit',
+        'scheduler_enabled',
+        'schedule_from_hour',
+        'schedule_from_min',
+        'schedule_to_hour',
+        'schedule_to_min',
+        'scheduler_days',
       ];
       for (const key of keys) {
         if (prefs[key] !== undefined) {
           safeStorage.setItem(`torrenta_${key}`, String(prefs[key]));
         }
+      }
+      if (prefs.scan_dirs !== undefined) {
+        safeStorage.setJSON('torrenta_scan_dirs', prefs.scan_dirs);
       }
       return true;
     }

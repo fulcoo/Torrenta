@@ -13,7 +13,7 @@
         buttonClass ? buttonClass : 'rounded-xl'
       ]"
     >
-      <span class="truncate opacity-90" :title="labelPrefix + selectedLabel">
+      <span class="truncate opacity-90 pr-2" :title="labelPrefix + selectedLabel">
         <span v-if="labelPrefix" class="hidden sm:inline">{{ labelPrefix }}</span>
         {{ selectedLabel }}
       </span>

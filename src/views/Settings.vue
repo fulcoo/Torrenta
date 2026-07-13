@@ -82,6 +82,14 @@
           </button>
           <button
             type="button"
+            @click="selectTab('speed')"
+            class="btn btn-sm justify-start gap-2.5 rounded-xl font-bold w-full border-none shadow-none text-left h-10 animate-fadeIn"
+            :class="activeTab === 'speed' ? 'bg-primary text-primary-content hover:bg-primary/95' : 'bg-transparent hover:bg-base-content/10'"
+          >
+            <GaugeIcon class="h-4 w-4" /> {{ t('settings.tabSpeed') }}
+          </button>
+          <button
+            type="button"
             @click="selectTab('connection')"
             class="btn btn-sm justify-start gap-2.5 rounded-xl font-bold w-full border-none shadow-none text-left h-10 animate-fadeIn"
             :class="activeTab === 'connection' ? 'bg-primary text-primary-content hover:bg-primary/95' : 'bg-transparent hover:bg-base-content/10'"
@@ -766,6 +774,535 @@
               </div>
             </div>
           </div>
+
+          <div class="h-px bg-base-content/10 w-full"></div>
+
+          <!-- Monitored Folders Settings (Server Settings) -->
+          <div class="relative text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <FolderOpenIcon class="h-5 w-5 text-accent" /> {{ t('settings.monitoredFoldersTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.monitoredFoldersDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5 relative">
+              <!-- Loading overlay when updating preferences -->
+              <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-xs font-bold">
+                  <span class="loading loading-spinner loading-xs text-primary"></span>
+                  <span>{{ t('settings.updatingPreferences') }}</span>
+                </div>
+              </div>
+
+              <!-- Enable Monitored Folders Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.download_in_scan_dirs"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('download_in_scan_dirs', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableMonitoredFolders') }}</span>
+                </div>
+              </label>
+
+              <!-- Conditionally display watched folders details -->
+              <div v-if="prefs.download_in_scan_dirs" class="flex flex-col gap-4 mt-2 animate-fadeIn">
+                
+                <!-- Add monitored folder inline form -->
+                <div class="bg-base-300/40 p-3 rounded-xl border border-base-content/5 flex flex-col gap-3">
+                  <span class="text-xs font-bold text-base-content/90">{{ t('settings.addWatchFolder') }}</span>
+                  <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                    <!-- Watch Path Input -->
+                    <div class="form-control md:col-span-5 w-full">
+                      <label class="label text-[10px] font-bold opacity-60 py-0.5">{{ t('settings.watchPath') }}</label>
+                      <input
+                        v-model="newWatchPath"
+                        type="text"
+                        :placeholder="t('settings.watchPathPlaceholder')"
+                        class="input input-bordered w-full rounded-lg bg-base-200 focus:outline-none focus:border-accent text-xs h-9 px-3 border border-base-content/10"
+                      />
+                    </div>
+
+                    <!-- Save Location dropdown -->
+                    <div class="form-control md:col-span-3 w-full">
+                      <label class="label text-[10px] font-bold opacity-60 py-0.5">{{ t('settings.saveLocation') }}</label>
+                      <CustomSelect 
+                        v-model="newSaveLocationType" 
+                        :options="[
+                          { value: 'default', label: t('settings.saveLocationDefault') },
+                          { value: 'monitored', label: t('settings.saveLocationMonitored') },
+                          { value: 'custom', label: t('settings.saveLocationCustom') }
+                        ]"
+                      />
+                    </div>
+
+                    <!-- Custom Save Path input -->
+                    <div v-if="newSaveLocationType === 'custom'" class="form-control md:col-span-3 w-full animate-fadeIn">
+                      <label class="label text-[10px] font-bold opacity-60 py-0.5">{{ t('settings.saveLocationCustom') }}</label>
+                      <input
+                        v-model="newCustomSavePath"
+                        type="text"
+                        :placeholder="t('settings.customPathPlaceholder')"
+                        class="input input-bordered w-full rounded-lg bg-base-200 focus:outline-none focus:border-accent text-xs h-9 px-3 border border-base-content/10"
+                      />
+                    </div>
+
+                    <!-- Add button -->
+                    <div class="form-control md:col-span-1" :class="newSaveLocationType !== 'custom' ? 'md:col-span-4' : ''">
+                      <button
+                        type="button"
+                        @click="addWatchFolder"
+                        :disabled="!newWatchPath.trim() || (newSaveLocationType === 'custom' && !newCustomSavePath.trim())"
+                        class="btn btn-accent btn-sm rounded-lg w-full text-xs font-bold h-9"
+                      >
+                        {{ t('common.add') }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Watch folders list table -->
+                <div class="overflow-x-auto border border-base-content/10 rounded-xl bg-base-300/10">
+                  <table class="table table-sm w-full text-xs text-left">
+                    <thead>
+                      <tr class="bg-base-300/40 text-base-content/70">
+                        <th class="py-2 px-3">{{ t('settings.watchPath') }}</th>
+                        <th class="py-2 px-3">{{ t('settings.saveLocation') }}</th>
+                        <th class="py-2 px-3 text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr 
+                        v-for="(dest, path) in prefs.scan_dirs" 
+                        :key="path"
+                        class="hover:bg-base-200/40 border-b border-base-content/5"
+                      >
+                        <td class="py-2.5 px-3 font-mono break-all text-xs text-base-content/95">{{ path }}</td>
+                        <td class="py-2.5 px-3">
+                          <span v-if="dest === 0 || dest === '0'" class="badge badge-outline badge-neutral text-[10px] rounded-lg">
+                            {{ t('settings.saveLocationDefault') }}
+                          </span>
+                          <span v-else-if="dest === 1 || dest === '1'" class="badge badge-outline badge-accent text-[10px] rounded-lg">
+                            {{ t('settings.saveLocationMonitored') }}
+                          </span>
+                          <span v-else class="font-mono text-[10px] bg-base-200 px-2 py-0.5 rounded border border-base-content/5 text-secondary truncate max-w-[200px] inline-block align-middle">
+                            {{ dest }}
+                          </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                          <button 
+                            type="button" 
+                            @click="removeWatchFolder(String(path))" 
+                            class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6"
+                          >
+                            <TrashIcon class="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                      <tr v-if="!prefs.scan_dirs || Object.keys(prefs.scan_dirs).length === 0">
+                        <td colspan="3" class="py-4 text-center text-xs opacity-50 font-medium italic">
+                          {{ t('settings.noWatchFolders') }}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Speed & Scheduler Panel -->
+        <div v-if="activeTab === 'speed'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+          <!-- Global & Alternative Speed Limits -->
+          <div class="relative text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <GaugeIcon class="h-5 w-5 text-primary" /> {{ t('settings.speedSettingsTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.speedSettingsDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5 relative">
+              <!-- Loading overlay when updating preferences -->
+              <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-xs font-bold">
+                  <span class="loading loading-spinner loading-xs text-primary"></span>
+                  <span>{{ t('settings.updatingPreferences') }}</span>
+                </div>
+              </div>
+
+              <!-- Speed Note -->
+              <span class="text-[10px] opacity-60 bg-base-300/40 p-2.5 rounded-lg border border-base-content/5">{{ t('settings.speedUnitNote') }}</span>
+
+              <!-- Global Upload Speed -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                  <span>{{ t('settings.upLimitLabel') }}</span>
+                </label>
+                <div class="flex items-center gap-2 w-full">
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="upLimitDisplay"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => upLimitDisplay = Math.max(0, parseInt(e.target.value || '0'))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="incrementSpeed('up_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="decrementSpeed('up_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="w-24 shrink-0">
+                    <CustomSelect
+                      v-model="upLimitUnit"
+                      :options="[
+                        { value: 'KiB', label: 'KB/s' },
+                        { value: 'MiB', label: 'MB/s' }
+                      ]"
+                      :disabled="savingPrefs"
+                      buttonClass="h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Global Download Speed -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                  <span>{{ t('settings.dlLimitLabel') }}</span>
+                </label>
+                <div class="flex items-center gap-2 w-full">
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="dlLimitDisplay"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => dlLimitDisplay = Math.max(0, parseInt(e.target.value || '0'))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="incrementSpeed('dl_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="decrementSpeed('dl_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="w-24 shrink-0">
+                    <CustomSelect
+                      v-model="dlLimitUnit"
+                      :options="[
+                        { value: 'KiB', label: 'KB/s' },
+                        { value: 'MiB', label: 'MB/s' }
+                      ]"
+                      :disabled="savingPrefs"
+                      buttonClass="h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-2 w-full border-t border-base-content/10"></div>
+
+              <!-- Alternative Upload Speed -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                  <span>{{ t('settings.altUpLimitLabel') }}</span>
+                </label>
+                <div class="flex items-center gap-2 w-full">
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="altUpLimitDisplay"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => altUpLimitDisplay = Math.max(0, parseInt(e.target.value || '0'))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="incrementSpeed('alt_up_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="decrementSpeed('alt_up_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="w-24 shrink-0">
+                    <CustomSelect
+                      v-model="altUpLimitUnit"
+                      :options="[
+                        { value: 'KiB', label: 'KB/s' },
+                        { value: 'MiB', label: 'MB/s' }
+                      ]"
+                      :disabled="savingPrefs"
+                      buttonClass="h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+              <!-- Alternative Download Speed -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-xs uppercase opacity-75 py-1">
+                  <span>{{ t('settings.altDlLimitLabel') }}</span>
+                </label>
+                <div class="flex items-center gap-2 w-full">
+                  <div class="relative flex items-center w-full">
+                    <input
+                      :value="altDlLimitDisplay"
+                      @input="(e: any) => e.target.value = e.target.value.replace(/\D/g, '')"
+                      @change="(e: any) => altDlLimitDisplay = Math.max(0, parseInt(e.target.value || '0'))"
+                      type="text"
+                      inputmode="numeric"
+                      pattern="[0-9]*"
+                      :disabled="savingPrefs"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-secondary text-xs h-10 pl-3 pr-9 border border-base-content/10"
+                    />
+                    <!-- Custom up/down adjustment buttons -->
+                    <div class="absolute right-2 flex flex-col gap-0.5 select-none">
+                      <button
+                        type="button"
+                        @click="incrementSpeed('alt_dl_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronUpIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="decrementSpeed('alt_dl_limit')"
+                        :disabled="savingPrefs"
+                        class="h-3.5 w-4.5 flex items-center justify-center text-base-content/40 hover:text-primary transition-colors hover:bg-base-content/10 active:bg-base-content/20 rounded-sm"
+                      >
+                        <ChevronDownIcon class="h-3 w-3 shrink-0" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="w-24 shrink-0">
+                    <CustomSelect
+                      v-model="altDlLimitUnit"
+                      :options="[
+                        { value: 'KiB', label: 'KB/s' },
+                        { value: 'MiB', label: 'MB/s' }
+                      ]"
+                      :disabled="savingPrefs"
+                      buttonClass="h-10 rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-px bg-base-content/10 w-full"></div>
+
+          <!-- Speed Limit Scheduler -->
+          <div class="relative text-left flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <h2 class="text-base font-bold flex items-center gap-2">
+                <SlidersIcon class="h-5 w-5 text-secondary" /> {{ t('settings.schedulerTitle') }}
+              </h2>
+              <span class="text-xs opacity-60">{{ t('settings.schedulerDesc') }}</span>
+            </div>
+
+            <!-- Server offline warning if not simulation and disconnected -->
+            <div 
+              v-if="!torrentStore.isConnected && !appStore.simulationMode"
+              class="bg-warning/10 border border-warning/30 rounded-xl p-3 flex items-center gap-2 text-xs font-semibold text-warning"
+            >
+              <AlertTriangleIcon class="h-4 w-4 text-warning shrink-0" />
+              <span>{{ t('settings.serverSettingsUnavailable') }}</span>
+            </div>
+
+            <div v-else class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5 relative">
+              <!-- Loading overlay when updating preferences -->
+              <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-xl z-10">
+                <div class="flex items-center gap-2 text-xs font-bold">
+                  <span class="loading loading-spinner loading-xs text-primary"></span>
+                  <span>{{ t('settings.updatingPreferences') }}</span>
+                </div>
+              </div>
+
+              <!-- Enable Scheduler Toggle -->
+              <label class="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  :checked="prefs.scheduler_enabled"
+                  :disabled="savingPrefs"
+                  @change="(e: any) => updatePref('scheduler_enabled', e.target.checked)"
+                  type="checkbox"
+                  class="checkbox checkbox-primary checkbox-sm rounded-lg mt-0.5"
+                />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-xs font-bold text-base-content">{{ t('settings.enableScheduler') }}</span>
+                </div>
+              </label>
+
+              <!-- Conditionally show Scheduler options -->
+              <div v-if="prefs.scheduler_enabled" class="flex flex-col gap-4 mt-2 animate-fadeIn">
+                
+                <!-- Scheduler Days -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.schedulerDaysLabel') }}</span>
+                  <div class="w-full sm:max-w-xs shrink-0">
+                    <CustomSelect 
+                      :modelValue="prefs.scheduler_days" 
+                      @update:modelValue="(val: any) => updatePref('scheduler_days', parseInt(val))"
+                      :options="[
+                        { value: 0, label: t('settings.schedulerDaysOptions.everyDay') },
+                        { value: 1, label: t('settings.schedulerDaysOptions.weekdays') },
+                        { value: 2, label: t('settings.schedulerDaysOptions.weekends') },
+                        { value: 3, label: t('settings.schedulerDaysOptions.monday') },
+                        { value: 4, label: t('settings.schedulerDaysOptions.tuesday') },
+                        { value: 5, label: t('settings.schedulerDaysOptions.wednesday') },
+                        { value: 6, label: t('settings.schedulerDaysOptions.thursday') },
+                        { value: 7, label: t('settings.schedulerDaysOptions.friday') },
+                        { value: 8, label: t('settings.schedulerDaysOptions.saturday') },
+                        { value: 9, label: t('settings.schedulerDaysOptions.sunday') }
+                      ]"
+                      :disabled="savingPrefs"
+                    />
+                  </div>
+                </div>
+
+                <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
+                <!-- Time Range selects -->
+                <div class="flex flex-col gap-3">
+                  <span class="font-bold text-xs uppercase opacity-75">{{ t('settings.schedulerTimeLabel') }}</span>
+                  <div class="flex flex-col sm:flex-row gap-4 items-center bg-base-300/20 p-3 rounded-xl border border-base-content/5">
+                    
+                    <!-- Start Hour / Min -->
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs opacity-75">{{ t('settings.schedulerTimeFrom') }}:</span>
+                      <div class="flex items-center gap-1">
+                        <select
+                          :value="prefs.schedule_from_hour"
+                          :disabled="savingPrefs"
+                          @change="(e: any) => updatePref('schedule_from_hour', parseInt(e.target.value))"
+                          class="select select-bordered select-xs rounded-lg bg-base-200 font-mono focus:outline-none"
+                        >
+                          <option v-for="h in 24" :key="h-1" :value="h-1">{{ String(h-1).padStart(2, '0') }}</option>
+                        </select>
+                        <span class="font-bold">:</span>
+                        <select
+                          :value="prefs.schedule_from_min"
+                          :disabled="savingPrefs"
+                          @change="(e: any) => updatePref('schedule_from_min', parseInt(e.target.value))"
+                          class="select select-bordered select-xs rounded-lg bg-base-200 font-mono focus:outline-none"
+                        >
+                          <option v-for="m in 60" :key="m-1" :value="m-1">{{ String(m-1).padStart(2, '0') }}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <span class="hidden sm:inline text-xs opacity-50">➜</span>
+
+                    <!-- End Hour / Min -->
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs opacity-75">{{ t('settings.schedulerTimeTo') }}:</span>
+                      <div class="flex items-center gap-1">
+                        <select
+                          :value="prefs.schedule_to_hour"
+                          :disabled="savingPrefs"
+                          @change="(e: any) => updatePref('schedule_to_hour', parseInt(e.target.value))"
+                          class="select select-bordered select-xs rounded-lg bg-base-200 font-mono focus:outline-none"
+                        >
+                          <option v-for="h in 24" :key="h-1" :value="h-1">{{ String(h-1).padStart(2, '0') }}</option>
+                        </select>
+                        <span class="font-bold">:</span>
+                        <select
+                          :value="prefs.schedule_to_min"
+                          :disabled="savingPrefs"
+                          @change="(e: any) => updatePref('schedule_to_min', parseInt(e.target.value))"
+                          class="select select-bordered select-xs rounded-lg bg-base-200 font-mono focus:outline-none"
+                        >
+                          <option v-for="m in 60" :key="m-1" :value="m-1">{{ String(m-1).padStart(2, '0') }}</option>
+                        </select>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 3. Connection Panel -->
@@ -1126,6 +1663,7 @@ import {
   InboxIcon,
   AlertTriangleIcon,
   CopyIcon,
+  GaugeIcon,
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
@@ -1161,23 +1699,29 @@ const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
 const errorLog = ref<string | null>(null);
 
 // Read initial tab from hash query (e.g. #/settings?tab=download)
-function getInitialTab(): 'general' | 'download' | 'connection' | 'simulation' {
+function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'simulation' {
   const hash = window.location.hash; // e.g. "#/settings?tab=download"
   const queryStart = hash.indexOf('?');
   if (queryStart !== -1) {
     const params = new URLSearchParams(hash.slice(queryStart + 1));
     const tab = params.get('tab');
-    if (tab === 'download' || tab === 'connection' || (tab === 'simulation' && isDev) || tab === 'general') {
+    if (
+      tab === 'download' ||
+      tab === 'speed' ||
+      tab === 'connection' ||
+      (tab === 'simulation' && isDev) ||
+      tab === 'general'
+    ) {
       return tab as any;
     }
   }
   return 'general';
 }
 
-const activeTab = ref<'general' | 'download' | 'connection' | 'simulation'>(getInitialTab());
+const activeTab = ref<'general' | 'download' | 'speed' | 'connection' | 'simulation'>(getInitialTab());
 const showMobileMenu = ref(false);
 
-function selectTab(tab: 'general' | 'download' | 'connection' | 'simulation') {
+function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'simulation') {
   if (tab === 'simulation' && !isDev) {
     activeTab.value = 'general';
   } else {
@@ -1186,10 +1730,11 @@ function selectTab(tab: 'general' | 'download' | 'connection' | 'simulation') {
   showMobileMenu.value = false;
 }
 
-function getTabLabel(tab: 'general' | 'download' | 'connection' | 'simulation') {
+function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'simulation') {
   switch (tab) {
     case 'general': return t('settings.tabGeneral');
     case 'download': return t('settings.tabDownload');
+    case 'speed': return t('settings.tabSpeed');
     case 'connection': return t('settings.tabConnection');
     case 'simulation': return t('settings.tabSimulation');
     default: return '';
@@ -1207,8 +1752,87 @@ const prefs = reactive({
   use_category_paths_in_manual_mode: false,
   export_dir: '',
   export_dir_fin: '',
+  download_in_scan_dirs: false,
+  scan_dirs: {} as Record<string, number | string>,
+  up_limit: 0,
+  dl_limit: 0,
+  alt_up_limit: 0,
+  alt_dl_limit: 0,
+  scheduler_enabled: false,
+  schedule_from_hour: 0,
+  schedule_from_min: 0,
+  schedule_to_hour: 0,
+  schedule_to_min: 0,
+  scheduler_days: 0,
 });
 const savingPrefs = ref(false);
+
+const upLimitUnit = ref<'KiB' | 'MiB'>('KiB');
+const dlLimitUnit = ref<'KiB' | 'MiB'>('KiB');
+const altUpLimitUnit = ref<'KiB' | 'MiB'>('KiB');
+const altDlLimitUnit = ref<'KiB' | 'MiB'>('KiB');
+
+const upLimitDisplay = computed({
+  get() {
+    if (prefs.up_limit <= 0) return 0;
+    const divider = upLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    return Math.round(prefs.up_limit / divider);
+  },
+  set(val: number) {
+    const multiplier = upLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    updatePref('up_limit', Math.max(0, val) * multiplier);
+  }
+});
+
+const dlLimitDisplay = computed({
+  get() {
+    if (prefs.dl_limit <= 0) return 0;
+    const divider = dlLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    return Math.round(prefs.dl_limit / divider);
+  },
+  set(val: number) {
+    const multiplier = dlLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    updatePref('dl_limit', Math.max(0, val) * multiplier);
+  }
+});
+
+const altUpLimitDisplay = computed({
+  get() {
+    if (prefs.alt_up_limit <= 0) return 0;
+    const divider = altUpLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    return Math.round(prefs.alt_up_limit / divider);
+  },
+  set(val: number) {
+    const multiplier = altUpLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    updatePref('alt_up_limit', Math.max(0, val) * multiplier);
+  }
+});
+
+const altDlLimitDisplay = computed({
+  get() {
+    if (prefs.alt_dl_limit <= 0) return 0;
+    const divider = altDlLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    return Math.round(prefs.alt_dl_limit / divider);
+  },
+  set(val: number) {
+    const multiplier = altDlLimitUnit.value === 'MiB' ? 1024 * 1024 : 1024;
+    updatePref('alt_dl_limit', Math.max(0, val) * multiplier);
+  }
+});
+
+function incrementSpeed(key: 'up_limit' | 'dl_limit' | 'alt_up_limit' | 'alt_dl_limit') {
+  const currentVal = prefs[key] || 0;
+  const unit = key === 'up_limit' ? upLimitUnit.value : key === 'dl_limit' ? dlLimitUnit.value : key === 'alt_up_limit' ? altUpLimitUnit.value : altDlLimitUnit.value;
+  const step = unit === 'MiB' ? 1024 * 1024 : 10 * 1024;
+  updatePref(key, Math.max(0, currentVal + step));
+}
+
+function decrementSpeed(key: 'up_limit' | 'dl_limit' | 'alt_up_limit' | 'alt_dl_limit') {
+  const currentVal = prefs[key] || 0;
+  const unit = key === 'up_limit' ? upLimitUnit.value : key === 'dl_limit' ? dlLimitUnit.value : key === 'alt_up_limit' ? altUpLimitUnit.value : altDlLimitUnit.value;
+  const step = unit === 'MiB' ? 1024 * 1024 : 10 * 1024;
+  updatePref(key, Math.max(0, currentVal - step));
+}
 
 async function fetchServerPreferences() {
   if (!torrentStore.isConnected && !appStore.simulationMode) return;
@@ -1225,6 +1849,23 @@ async function fetchServerPreferences() {
       prefs.use_category_paths_in_manual_mode = !!data.use_category_paths_in_manual_mode;
       prefs.export_dir = data.export_dir || '';
       prefs.export_dir_fin = data.export_dir_fin || '';
+      prefs.download_in_scan_dirs = !!data.download_in_scan_dirs;
+      prefs.scan_dirs = data.scan_dirs || {};
+      prefs.up_limit = data.up_limit !== undefined ? data.up_limit : 0;
+      prefs.dl_limit = data.dl_limit !== undefined ? data.dl_limit : 0;
+      prefs.alt_up_limit = data.alt_up_limit !== undefined ? data.alt_up_limit : 0;
+      prefs.alt_dl_limit = data.alt_dl_limit !== undefined ? data.alt_dl_limit : 0;
+      prefs.scheduler_enabled = !!data.scheduler_enabled;
+      prefs.schedule_from_hour = data.schedule_from_hour !== undefined ? data.schedule_from_hour : 0;
+      prefs.schedule_from_min = data.schedule_from_min !== undefined ? data.schedule_from_min : 0;
+      prefs.schedule_to_hour = data.schedule_to_hour !== undefined ? data.schedule_to_hour : 0;
+      prefs.schedule_to_min = data.schedule_to_min !== undefined ? data.schedule_to_min : 0;
+      prefs.scheduler_days = data.scheduler_days !== undefined ? data.scheduler_days : 0;
+
+      upLimitUnit.value = (prefs.up_limit > 0 && prefs.up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
+      dlLimitUnit.value = (prefs.dl_limit > 0 && prefs.dl_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
+      altUpLimitUnit.value = (prefs.alt_up_limit > 0 && prefs.alt_up_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
+      altDlLimitUnit.value = (prefs.alt_dl_limit > 0 && prefs.alt_dl_limit % (1024 * 1024) === 0) ? 'MiB' : 'KiB';
     }
   } catch (err) {
     console.error('Failed to load server preferences:', err);
@@ -1242,8 +1883,20 @@ async function updatePref(
     | 'category_changed_tmm_enabled'
     | 'use_category_paths_in_manual_mode'
     | 'export_dir'
-    | 'export_dir_fin',
-  value: boolean | string
+    | 'export_dir_fin'
+    | 'download_in_scan_dirs'
+    | 'scan_dirs'
+    | 'up_limit'
+    | 'dl_limit'
+    | 'alt_up_limit'
+    | 'alt_dl_limit'
+    | 'scheduler_enabled'
+    | 'schedule_from_hour'
+    | 'schedule_from_min'
+    | 'schedule_to_hour'
+    | 'schedule_to_min'
+    | 'scheduler_days',
+  value: boolean | string | number | Record<string, number | string>
 ) {
   savingPrefs.value = true;
   try {
@@ -1262,7 +1915,7 @@ async function updatePref(
 }
 
 watch([activeTab, () => torrentStore.isConnected], async ([newTab, isConnected]) => {
-  if (newTab === 'download' && (isConnected || appStore.simulationMode)) {
+  if ((newTab === 'download' || newTab === 'speed') && (isConnected || appStore.simulationMode)) {
     await fetchServerPreferences();
   }
 }, { immediate: true });
@@ -1298,6 +1951,39 @@ function submitAddPath() {
     appStore.addPathToCategory(activeCategoryForPath.value, path);
   }
   showAddPathModal.value = false;
+}
+
+const newWatchPath = ref('');
+const newSaveLocationType = ref<'default' | 'monitored' | 'custom'>('default');
+const newCustomSavePath = ref('');
+
+async function addWatchFolder() {
+  const watchPath = newWatchPath.value.trim().replace(/\\/g, '/');
+  if (!watchPath) return;
+
+  let value: number | string = 0;
+  if (newSaveLocationType.value === 'monitored') {
+    value = 1;
+  } else if (newSaveLocationType.value === 'custom') {
+    const customPath = newCustomSavePath.value.trim().replace(/\\/g, '/');
+    if (!customPath) return;
+    value = customPath;
+  }
+
+  const updatedScanDirs = { ...prefs.scan_dirs, [watchPath]: value };
+  await updatePref('scan_dirs', updatedScanDirs);
+
+  newWatchPath.value = '';
+  newSaveLocationType.value = 'default';
+  newCustomSavePath.value = '';
+}
+
+async function removeWatchFolder(watchPath: string) {
+  if (confirm(t('settings.deleteWatchFolderConfirm', { path: watchPath }))) {
+    const updatedScanDirs = { ...prefs.scan_dirs };
+    delete updatedScanDirs[watchPath];
+    await updatePref('scan_dirs', updatedScanDirs);
+  }
 }
 
 const form = reactive({

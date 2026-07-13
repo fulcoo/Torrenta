@@ -222,6 +222,16 @@ describe('QBittorrentAdapter', () => {
         incomplete_files_ext: false,
         auto_tmm_enabled: true,
         export_dir: '/backups',
+        up_limit: 1024000,
+        dl_limit: 5120000,
+        alt_up_limit: 51200,
+        alt_dl_limit: 102400,
+        scheduler_enabled: true,
+        schedule_from_hour: 8,
+        schedule_from_min: 0,
+        schedule_to_hour: 20,
+        schedule_to_min: 0,
+        scheduler_days: 0,
       };
       vi.mocked(api.get).mockResolvedValueOnce({ data: mockPrefs });
 
@@ -237,6 +247,16 @@ describe('QBittorrentAdapter', () => {
         preallocate_all: true,
         auto_tmm_enabled: true,
         export_dir: '/backups',
+        up_limit: 1024000,
+        dl_limit: 5120000,
+        alt_up_limit: 51200,
+        alt_dl_limit: 102400,
+        scheduler_enabled: true,
+        schedule_from_hour: 8,
+        schedule_from_min: 0,
+        schedule_to_hour: 20,
+        schedule_to_min: 0,
+        scheduler_days: 0,
       };
       const success = await adapter.setPreferences(prefPayload);
       expect(success).toBe(true);
