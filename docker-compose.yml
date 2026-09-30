@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Torrenta Premium WebUI (Nginx with Reverse Proxy)
+  # Torrenta Premium WebUI (Built-in Proxy & Persistent Settings)
   torrenta:
     image: fulcoo/torrenta:latest
     # If you prefer to build the image locally, comment out the line above and uncomment the block below:
@@ -14,11 +14,16 @@ services:
     # QBITTORRENT_HOST: The hostname:port qBittorrent expects in the Host header (usually localhost:<port> or 127.0.0.1:<port>)
     # QBITTORRENT_USER: (Optional) Your qBittorrent WebUI login username for automatic login
     # QBITTORRENT_PASS: (Optional) Your qBittorrent WebUI login password for automatic login
+    # DATA_DIR: Directory where user settings (categories, save paths, themes, etc.) are persisted
     environment:
       QBITTORRENT_URL: "http://host.docker.internal:8081"
       QBITTORRENT_HOST: "localhost:8081"
       # QBITTORRENT_USER: "admin"
       # QBITTORRENT_PASS: "adminadmin"
+      DATA_DIR: "/data"
+    volumes:
+      # Persistent storage: binds host ./data to container /data to keep settings across container updates
+      - ./data:/data
     ports:
       - 3000:80 # Access Torrenta UI at http://localhost:3000
     extra_hosts:
@@ -33,4 +38,3 @@ services:
 # networks:
 #   qbt_network:
 #     external: true
-

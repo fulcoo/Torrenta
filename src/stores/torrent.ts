@@ -45,14 +45,14 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   }
 
   const SIMULATED_TEMPLATES = [
-    { name: 'Ubuntu Desktop 26.04 LTS (x64) ISO', category: 'Software', status: 'downloading', size: 4831838208, initialProgress: 35.4 },
-    { name: 'Inception 2010 2160p BluRay HEVC DTS-HD MA 5.1', category: 'Movies', status: 'downloading', size: 68719476736, initialProgress: 68.2 },
-    { name: 'Daft Punk - Random Access Memories (FLAC 24bit)', category: 'Music', status: 'seeding', size: 943718400, initialProgress: 100 },
-    { name: 'The Rust Programming Language 2nd Edition.pdf', category: 'Books', status: 'seeding', size: 15728640, initialProgress: 100 },
-    { name: 'Big Buck Bunny Open Source Movie 4K', category: '', status: 'paused', size: 2147483648, initialProgress: 12.8 },
-    { name: 'Arch Linux Installation Media Release.iso', category: 'Software', status: 'checking', size: 858993459, initialProgress: 88.5 },
-    { name: 'Debian NetInst v12 x86_64 installer.iso', category: 'Software', status: 'queued', size: 419430400, initialProgress: 0 },
-    { name: 'Corrupted Download File Sample.zip', category: '', status: 'error', size: 1073741824, initialProgress: 42.1 },
+    { name: 'Ubuntu Desktop 26.04 LTS (x64) ISO', category: 'Software', status: 'downloading', rawState: 'downloading', size: 4831838208, initialProgress: 35.4 },
+    { name: 'Inception 2010 2160p BluRay HEVC DTS-HD MA 5.1', category: 'Movies', status: 'downloading', rawState: 'stalledDL', size: 68719476736, initialProgress: 68.2 },
+    { name: 'Daft Punk - Random Access Memories (FLAC 24bit)', category: 'Music', status: 'seeding', rawState: 'uploading', size: 943718400, initialProgress: 100 },
+    { name: 'The Rust Programming Language 2nd Edition.pdf', category: 'Books', status: 'seeding', rawState: 'stalledUP', size: 15728640, initialProgress: 100 },
+    { name: 'Big Buck Bunny Open Source Movie 4K', category: '', status: 'paused', rawState: 'stoppedDL', size: 2147483648, initialProgress: 12.8 },
+    { name: 'Arch Linux Installation Media Release.iso', category: 'Software', status: 'checking', rawState: 'checkingDL', size: 858993459, initialProgress: 88.5 },
+    { name: 'Debian NetInst v12 x86_64 installer.iso', category: 'Software', status: 'queued', rawState: 'queuedDL', size: 419430400, initialProgress: 0 },
+    { name: 'Corrupted Download File Sample.zip', category: '', status: 'error', rawState: 'error', size: 1073741824, initialProgress: 42.1 },
   ];
 
   function updateQueueStatus() {
@@ -136,11 +136,16 @@ export const useTorrentStore = defineStore('torrentStore', () => {
       
       let dlSpeed = 0;
       let ulSpeed = 0;
-      if (template.status === 'downloading') {
+      if (template.rawState === 'downloading') {
         dlSpeed = Math.floor((Math.random() * 15 + 5) * 1024 * 1024); // 5 - 20 MB/s
         ulSpeed = Math.floor((Math.random() * 500 + 100) * 1024); // 100 - 600 KB/s
-      } else if (template.status === 'seeding') {
+      } else if (template.rawState === 'uploading') {
         ulSpeed = Math.floor((Math.random() * 5 + 1) * 1024 * 1024); // 1 - 6 MB/s
+      } else if (template.status === 'downloading' && template.rawState !== 'stalledDL') {
+        dlSpeed = Math.floor((Math.random() * 15 + 5) * 1024 * 1024);
+        ulSpeed = Math.floor((Math.random() * 500 + 100) * 1024);
+      } else if (template.status === 'seeding' && template.rawState !== 'stalledUP') {
+        ulSpeed = Math.floor((Math.random() * 5 + 1) * 1024 * 1024);
       }
 
       const mockSeeds = template.status === 'seeding' ? Math.floor(Math.random() * 20 + 5) : (template.status === 'downloading' ? Math.floor(Math.random() * 8 + 1) : 0);
@@ -170,7 +175,8 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         downloadSpeed: dlSpeed,
         uploadSpeed: ulSpeed,
         status: template.status as UnifiedTorrent['status'],
-        eta: template.status === 'downloading' ? Math.floor(Math.random() * 3600 + 120) : 0,
+        rawState: template.rawState || template.status,
+        eta: template.status === 'downloading' && dlSpeed > 0 ? Math.floor(Math.random() * 3600 + 120) : 0,
         category: template.category,
         ratio: mockRatio,
         num_seeds: mockSeeds,
@@ -206,6 +212,23 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     // Add custom categories configured in appStore
     appStore.categoryConfigs.forEach((c) => list.add(c.name));
     return Array.from(list);
+  });
+
+  const torrentSavePaths = computed(() => {
+    const map = new Map<string, number>();
+    for (const t of torrents.value) {
+      let p = (t.savepath || '').trim();
+      if (!p) continue;
+      if (p.length > 1 && (p.endsWith('/') || p.endsWith('\\'))) {
+        if (!/^[a-zA-Z]:[\\\/]$/.test(p) && p !== '/') {
+          p = p.replace(/[/\\]+$/, '');
+        }
+      }
+      map.set(p, (map.get(p) ?? 0) + 1);
+    }
+    return [...map.entries()]
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
   });
 
   function addCustomCategory(cat: string) {
@@ -502,6 +525,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           return {
             ...t,
             status: 'paused',
+            rawState: t.progress >= 100 ? 'stoppedUP' : 'stoppedDL',
             downloadSpeed: 0,
             uploadSpeed: 0,
           };
@@ -524,7 +548,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     
     // Update local UI immediately
     torrents.value = torrents.value.map((t) =>
-      (matchAll || ids.includes(t.id)) ? { ...t, status: 'paused' as const } : t
+      (matchAll || ids.includes(t.id)) ? { ...t, status: 'paused' as const, rawState: t.progress >= 100 ? 'stoppedUP' : 'stoppedDL' } : t
     );
 
     const success = await driver.pauseTorrents(ids);
@@ -546,6 +570,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           return {
             ...t,
             status: isComplete ? 'seeding' : 'downloading',
+            rawState: isComplete ? 'uploading' : 'downloading',
             downloadSpeed: isComplete ? 0 : Math.floor((Math.random() * 15 + 5) * 1024 * 1024),
             uploadSpeed: isComplete ? Math.floor((Math.random() * 5 + 1) * 1024 * 1024) : Math.floor((Math.random() * 500 + 100) * 1024),
           };
@@ -894,6 +919,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           return {
             ...t,
             status: isComplete ? 'seeding' as const : 'downloading' as const,
+            rawState: isComplete ? 'forcedUP' : 'forcedDL',
             downloadSpeed: isComplete ? 0 : Math.floor((Math.random() * 25 + 15) * 1024 * 1024),
             uploadSpeed: isComplete ? Math.floor((Math.random() * 8 + 3) * 1024 * 1024) : Math.floor((Math.random() * 800 + 300) * 1024),
           };
@@ -1213,6 +1239,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     connectionError,
     searchQuery,
     categories,
+    torrentSavePaths,
     tags,
     customTags,
     systemTags,

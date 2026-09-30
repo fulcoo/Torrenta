@@ -1145,6 +1145,7 @@ import TorrentFileTree from '@/components/TorrentFileTree.vue';
 import EditTrackerModal from '@/components/EditTrackerModal.vue';
 import { parseTorrentFile, buildFileTree, parseMagnetLink, type ParsedTorrent, type FileTreeNode } from '@/utils/torrentParser';
 import type { UnifiedTorrent, TorrentProperties } from '@/models/torrent';
+import { matchTorrentStatus } from '@/utils/torrentStatus';
 import {
   AlertTriangleIcon,
   PauseIcon,
@@ -1624,7 +1625,7 @@ const filteredTorrents = computed(() => {
 
   // 1. Status Filter
   if (activeStatus.value !== 'all') {
-    list = list.filter((t) => t.status === activeStatus.value);
+    list = list.filter((t) => matchTorrentStatus(t, activeStatus.value));
   }
 
   // 2. Category Filter

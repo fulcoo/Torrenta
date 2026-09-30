@@ -1,7 +1,7 @@
 {
   "name": "torrenta",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.2.0",
   "description": "✨ A beautiful, easy-to-use, and lightweight WebUI client for qBittorrent. 🚀",
   "type": "module",
   "scripts": {
@@ -9,7 +9,8 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:fpk": "python scripts/build_official_fpk.py"
   },
   "dependencies": {
     "axios": "^1.18.1",

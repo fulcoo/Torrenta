@@ -15,11 +15,15 @@ export class QBittorrentAdapter implements DownloaderAdapter {
         if (password) params.append('password', password);
 
         // Attempt login
-        await api.post('/auth/login', params, {
+        const loginRes = await api.post('/auth/login', params, {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
         });
+
+        if (loginRes.data && typeof loginRes.data === 'string' && loginRes.data.trim() === 'Fails.') {
+          throw new Error('用户名或密码错误 (qBittorrent 登录被拒绝，若使用 qB 5.x 请查看容器日志中的临时密码)');
+        }
       }
 
       // Verify connection by calling transfer/info or sync/maindata
@@ -48,6 +52,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
           downloadSpeed: t.dlspeed || 0,
           uploadSpeed: t.upspeed || 0,
           status: this.mapStatus(t.state),
+          rawState: t.state || '',
           eta: t.eta || 0,
           category: t.category || '',
           ratio: t.ratio || 0,
@@ -593,6 +598,8 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       case 'checkingUL':
       case 'checkingResumeData':
         return 'checking';
+      case 'moving':
+        return 'moving';
       case 'error':
       case 'missingFiles':
         return 'error';
@@ -603,6 +610,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
         // Safeguard heuristics (order matters: check for check/pause/stop first)
         if (state.includes('pause') || state.includes('stop')) return 'paused';
         if (state.includes('check')) return 'checking';
+        if (state.includes('mov')) return 'moving';
         if (state.includes('DL')) return 'downloading';
         if (state.includes('UL') || state.includes('UP')) return 'seeding';
         return 'queued';

@@ -88,4 +88,19 @@ describe('torrentStore', () => {
     expect(store.isConnected).toBe(true);
     expect(store.isPollingActive).toBe(true);
   });
+
+  it('should compute unique torrent save paths sorted by count and path', () => {
+    const store = useTorrentStore();
+    (store as any).torrents = [
+      { id: '1', savepath: '/downloads/movies' },
+      { id: '2', savepath: '/downloads/movies/' },
+      { id: '3', savepath: '/downloads/tv' },
+      { id: '4', savepath: '' },
+    ];
+
+    expect(store.torrentSavePaths).toEqual([
+      { path: '/downloads/movies', count: 2 },
+      { path: '/downloads/tv', count: 1 },
+    ]);
+  });
 });

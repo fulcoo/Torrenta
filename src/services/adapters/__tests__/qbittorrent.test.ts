@@ -86,6 +86,7 @@ describe('QBittorrentAdapter', () => {
         downloadSpeed: 100,
         uploadSpeed: 200,
         status: 'downloading',
+        rawState: 'downloading',
         eta: 50,
         category: 'movies',
         ratio: 1.5,

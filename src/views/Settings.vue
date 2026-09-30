@@ -2298,21 +2298,88 @@
 
     <!-- Add Path Modal -->
     <div v-if="showAddPathModal" class="modal modal-open">
-      <div class="modal-box bg-base-200 border border-base-content/10 rounded-2xl max-w-md text-left">
+      <div class="modal-box bg-base-200 border border-base-content/10 rounded-2xl max-w-md text-left overflow-visible">
         <h3 class="font-black text-base mb-1">{{ t('settings.addPathBtn') }}</h3>
-        <p class="text-xs opacity-60 mb-3">{{ t('settings.newCategoryName') }} <span class="font-bold text-secondary">{{ activeCategoryForPath }}</span></p>
-        <input
-          v-model="newPathInput"
-          type="text"
-          :placeholder="t('settings.addPathPlaceholder')"
-          class="input input-bordered w-full rounded-xl bg-base-300 focus:outline-none focus:border-secondary text-sm h-10 px-3 border border-base-content/10 mb-4"
-          @keyup.enter="submitAddPath"
-        />
-        <div class="modal-action mt-0 gap-2">
+        <p class="text-xs opacity-60 mb-4">{{ t('settings.targetCategory') }} <span class="font-bold text-secondary">{{ activeCategoryForPath }}</span></p>
+
+        <!-- Mode 1: Torrent save paths exist -->
+        <div v-if="torrentStore.torrentSavePaths.length > 0" class="flex flex-col gap-3">
+          <!-- Dropdown Mode -->
+          <div v-if="!isManualPathInput" class="flex flex-col gap-2">
+            <label class="text-xs font-bold opacity-75 flex items-center justify-between">
+              <span>{{ t('settings.selectPathFromTorrents') }}</span>
+              <span class="text-[10px] font-normal opacity-50">{{ t('settings.availablePathsCount', { count: torrentStore.torrentSavePaths.length }) }}</span>
+            </label>
+            <CustomSelect 
+              v-model="selectedPathOption" 
+              :options="addPathSelectOptions" 
+              @change="onPathOptionChange"
+            />
+            <div class="flex items-center justify-between text-xs mt-1">
+              <span class="opacity-60">{{ t('settings.notWhatYouWant') }}</span>
+              <button 
+                type="button" 
+                @click="switchToManual" 
+                class="text-secondary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                {{ t('settings.enterManually') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Manual Input Mode -->
+          <div v-else class="flex flex-col gap-2 animate-fadeIn">
+            <label class="text-xs font-bold opacity-75">{{ t('settings.manualPathInputLabel') }}</label>
+            <input
+              ref="customInputRef"
+              v-model="manualPathInput"
+              type="text"
+              :placeholder="t('settings.addPathPlaceholder')"
+              class="input input-bordered w-full rounded-xl bg-base-300 focus:outline-none focus:border-secondary text-sm h-10 px-3 border border-base-content/10"
+              @keyup.enter="submitAddPath"
+            />
+            <div class="flex items-center justify-start text-xs mt-0.5">
+              <button 
+                type="button" 
+                @click="switchToDropdown" 
+                class="text-secondary/80 hover:text-secondary hover:underline flex items-center gap-1 cursor-pointer font-semibold"
+              >
+                <ArrowLeftIcon class="h-3 w-3" />
+                <span>{{ t('settings.backToPathDropdown') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode 2: No torrent save paths detected -->
+        <div v-else class="flex flex-col gap-3">
+          <div class="p-3 bg-base-300/40 border border-base-content/10 rounded-xl text-xs opacity-75 flex items-center gap-2">
+            <InfoIcon class="h-4 w-4 shrink-0 text-info" />
+            <span>{{ t('settings.noTorrentPathsFound') }}</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-bold opacity-75">{{ t('settings.manualPathInputLabel') }}</label>
+            <input
+              ref="customInputRef"
+              v-model="manualPathInput"
+              type="text"
+              :placeholder="t('settings.addPathPlaceholder')"
+              class="input input-bordered w-full rounded-xl bg-base-300 focus:outline-none focus:border-secondary text-sm h-10 px-3 border border-base-content/10"
+              @keyup.enter="submitAddPath"
+            />
+          </div>
+        </div>
+
+        <div class="modal-action mt-4 gap-2">
           <button type="button" class="btn btn-neutral btn-sm rounded-xl font-bold" @click="showAddPathModal = false">
             {{ t('common.cancel') }}
           </button>
-          <button type="button" class="btn btn-secondary btn-sm rounded-xl font-bold" @click="submitAddPath">
+          <button 
+            type="button" 
+            class="btn btn-secondary btn-sm rounded-xl font-bold" 
+            :disabled="!canSubmitAddPath"
+            @click="submitAddPath"
+          >
             {{ t('settings.addPathBtn') }}
           </button>
         </div>
@@ -2320,6 +2387,7 @@
       <div class="modal-backdrop bg-black/40 backdrop-blur-xs" @click="showAddPathModal = false"></div>
     </div>
   </div>
+
 </template>
 
 <script setup lang="ts">
@@ -2360,6 +2428,7 @@ import {
   AlertTriangleIcon,
   CopyIcon,
   GaugeIcon,
+  InfoIcon,
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
@@ -2696,10 +2765,6 @@ watch([activeTab, () => torrentStore.isConnected], async ([newTab, isConnected])
 const newCategoryInput = ref('');
 const showCreateCategoryModal = ref(false);
 
-const activeCategoryForPath = ref('');
-const newPathInput = ref('');
-const showAddPathModal = ref(false);
-
 function openCreateCategoryModal() {
   newCategoryInput.value = '';
   showCreateCategoryModal.value = true;
@@ -2713,16 +2778,121 @@ async function submitCreateCategory() {
   showCreateCategoryModal.value = false;
 }
 
+const activeCategoryForPath = ref('');
+const selectedPathOption = ref('');
+const manualPathInput = ref('');
+const isManualPathInput = ref(false);
+const showAddPathModal = ref(false);
+const customInputRef = ref<HTMLInputElement | null>(null);
+
+const addPathSelectOptions = computed(() => {
+  const existingCat = appStore.categoryConfigs.find((c) => c.name === activeCategoryForPath.value);
+  const alreadyAdded = existingCat ? existingCat.paths : [];
+
+  const options = torrentStore.torrentSavePaths.map((item) => {
+    const isAdded = alreadyAdded.includes(item.path);
+    return {
+      value: item.path,
+      label: isAdded
+        ? `${item.path} (${t('settings.pathAlreadyAdded')})`
+        : item.count > 1
+          ? `${item.path} (${item.count})`
+          : item.path,
+      disabled: isAdded,
+    };
+  });
+
+  options.push({
+    value: '__custom__',
+    label: t('settings.customPathOption'),
+    disabled: false,
+  });
+
+  return options;
+});
+
+const canSubmitAddPath = computed(() => {
+  if (torrentStore.torrentSavePaths.length === 0 || isManualPathInput.value || selectedPathOption.value === '__custom__') {
+    return manualPathInput.value.trim().length > 0;
+  }
+  return selectedPathOption.value.trim().length > 0 && selectedPathOption.value !== '__custom__';
+});
+
 function openAddPathModal(catName: string) {
   activeCategoryForPath.value = catName;
-  newPathInput.value = '';
+  manualPathInput.value = '';
+
+  const existingCat = appStore.categoryConfigs.find((c) => c.name === catName);
+  const alreadyAdded = existingCat ? existingCat.paths : [];
+
+  // Find first path that is not yet added to this category
+  const available = torrentStore.torrentSavePaths.filter((item) => !alreadyAdded.includes(item.path));
+
+  if (available.length > 0) {
+    selectedPathOption.value = available[0].path;
+    isManualPathInput.value = false;
+  } else if (torrentStore.torrentSavePaths.length > 0) {
+    // All existing paths are already added
+    selectedPathOption.value = '__custom__';
+    isManualPathInput.value = true;
+  } else {
+    // No torrent paths found
+    selectedPathOption.value = '__custom__';
+    isManualPathInput.value = true;
+  }
+
   showAddPathModal.value = true;
+  if (isManualPathInput.value) {
+    nextTick(() => {
+      customInputRef.value?.focus();
+    });
+  }
+}
+
+function onPathOptionChange(val: string) {
+  if (val === '__custom__') {
+    isManualPathInput.value = true;
+    nextTick(() => {
+      customInputRef.value?.focus();
+    });
+  } else {
+    isManualPathInput.value = false;
+  }
+}
+
+function switchToManual() {
+  isManualPathInput.value = true;
+  if (selectedPathOption.value && selectedPathOption.value !== '__custom__') {
+    manualPathInput.value = selectedPathOption.value;
+  }
+  selectedPathOption.value = '__custom__';
+  nextTick(() => {
+    customInputRef.value?.focus();
+  });
+}
+
+function switchToDropdown() {
+  isManualPathInput.value = false;
+  const existingCat = appStore.categoryConfigs.find((c) => c.name === activeCategoryForPath.value);
+  const alreadyAdded = existingCat ? existingCat.paths : [];
+  const available = torrentStore.torrentSavePaths.filter((item) => !alreadyAdded.includes(item.path));
+  if (available.length > 0) {
+    selectedPathOption.value = available[0].path;
+  } else if (torrentStore.torrentSavePaths.length > 0) {
+    selectedPathOption.value = torrentStore.torrentSavePaths[0].path;
+  }
 }
 
 function submitAddPath() {
-  const path = newPathInput.value.trim();
-  if (path && activeCategoryForPath.value) {
-    appStore.addPathToCategory(activeCategoryForPath.value, path);
+  let targetPath = '';
+  if (torrentStore.torrentSavePaths.length === 0 || isManualPathInput.value || selectedPathOption.value === '__custom__') {
+    targetPath = manualPathInput.value.trim();
+  } else {
+    targetPath = selectedPathOption.value.trim();
+  }
+
+  if (targetPath && activeCategoryForPath.value) {
+    appStore.addPathToCategory(activeCategoryForPath.value, targetPath);
   }
   showAddPathModal.value = false;
 }
@@ -2960,70 +3130,40 @@ function handleRegenerateSimData() {
 }
 
 // Sidebar customization logic
-const STORAGE_ORDER_KEY = 'torrenta_sidebar_sections_order';
-const STORAGE_HIDDEN_KEY = 'torrenta_sidebar_sections_hidden';
-const defaultOrder = ['status', 'category', 'tag', 'savepath', 'tracker'];
-
-const sectionsOrder = ref<string[]>([]);
-const hiddenSections = ref<string[]>([]);
+const sectionsOrder = computed(() => appStore.sidebarOrder);
 
 function loadSidebarConfig() {
-  const storedOrder = localStorage.getItem(STORAGE_ORDER_KEY);
-  if (storedOrder) {
-    try {
-      sectionsOrder.value = JSON.parse(storedOrder);
-    } catch {
-      sectionsOrder.value = [...defaultOrder];
-    }
-  } else {
-    sectionsOrder.value = [...defaultOrder];
-  }
-  
-  // Guarantee all default sections exist in case of version upgrades
-  defaultOrder.forEach((id) => {
-    if (!sectionsOrder.value.includes(id)) {
-      sectionsOrder.value.push(id);
-    }
-  });
-
-  const storedHidden = localStorage.getItem(STORAGE_HIDDEN_KEY);
-  if (storedHidden) {
-    try {
-      hiddenSections.value = JSON.parse(storedHidden);
-    } catch {
-      hiddenSections.value = [];
-    }
-  } else {
-    hiddenSections.value = [];
-  }
+  // Sidebar config is automatically hydrated and synchronized by appStore
 }
 
 function moveSection(index: number, direction: 'up' | 'down') {
   const newIndex = direction === 'up' ? index - 1 : index + 1;
-  if (newIndex < 0 || newIndex >= sectionsOrder.value.length) return;
+  const current = [...appStore.sidebarOrder];
+  if (newIndex < 0 || newIndex >= current.length) return;
   
-  const temp = sectionsOrder.value[index];
-  sectionsOrder.value[index] = sectionsOrder.value[newIndex];
-  sectionsOrder.value[newIndex] = temp;
+  const temp = current[index];
+  current[index] = current[newIndex];
+  current[newIndex] = temp;
   
-  localStorage.setItem(STORAGE_ORDER_KEY, JSON.stringify(sectionsOrder.value));
+  appStore.setSidebarOrder(current);
 }
 
 function toggleSectionVisibility(id: string) {
   if (id === 'status') return;
   
-  if (hiddenSections.value.includes(id)) {
-    hiddenSections.value = hiddenSections.value.filter((x) => x !== id);
+  let currentHidden = [...appStore.sidebarHidden];
+  if (currentHidden.includes(id)) {
+    currentHidden = currentHidden.filter((x) => x !== id);
   } else {
-    hiddenSections.value.push(id);
+    currentHidden.push(id);
   }
   
-  localStorage.setItem(STORAGE_HIDDEN_KEY, JSON.stringify(hiddenSections.value));
+  appStore.setSidebarHidden(currentHidden);
 }
 
 function isSectionVisible(id: string): boolean {
   if (id === 'status') return true;
-  return !hiddenSections.value.includes(id);
+  return !appStore.sidebarHidden.includes(id);
 }
 
 function getSectionLabel(id: string): string {

@@ -176,7 +176,7 @@
       </button>
 
       <button
-        v-else-if="torrent.status === 'downloading' || torrent.status === 'seeding' || torrent.status === 'queued'"
+        v-else-if="torrent.status === 'downloading' || torrent.status === 'seeding' || torrent.status === 'queued' || torrent.status === 'moving'"
         @click.stop="$emit('pause')"
         class="btn btn-neutral w-8 h-8 min-h-[32px] sm:w-9 sm:h-9 sm:min-h-[36px] flex items-center justify-center rounded-full p-0 hover:scale-105 active:scale-95 shrink-0"
         :title="t('torrent.pause')"
@@ -210,6 +210,7 @@ import {
   AlertCircleIcon,
   RefreshCwIcon,
   ClockIcon,
+  MoveIcon,
 } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -247,6 +248,8 @@ const statusColorClass = computed(() => {
       return 'bg-error';
     case 'queued':
       return 'bg-info';
+    case 'moving':
+      return 'bg-cyan-500';
     default:
       return 'bg-base-content/20';
   }
@@ -267,6 +270,8 @@ const progressBgClass = computed(() => {
       return 'bg-error';
     case 'queued':
       return 'bg-info';
+    case 'moving':
+      return 'bg-cyan-500';
     default:
       return 'bg-primary';
   }
@@ -309,6 +314,8 @@ const progressTextColorClass = computed(() => {
       return 'text-error';
     case 'queued':
       return 'text-info';
+    case 'moving':
+      return 'text-cyan-500';
     default:
       return 'text-primary';
   }
@@ -329,6 +336,8 @@ const statusBadgeClass = computed(() => {
       return 'bg-error/10 text-error glow-error';
     case 'queued':
       return 'bg-info/10 text-info glow-info';
+    case 'moving':
+      return 'bg-cyan-500/10 text-cyan-500';
     default:
       return 'bg-base-content/10 text-base-content';
   }
@@ -349,6 +358,8 @@ const statusIcon = computed(() => {
       return AlertCircleIcon;
     case 'queued':
       return ClockIcon;
+    case 'moving':
+      return MoveIcon;
     default:
       return DownloadIcon;
   }

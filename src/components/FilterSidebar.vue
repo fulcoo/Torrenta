@@ -22,27 +22,33 @@
         </div>
 
         <!-- Status List -->
-        <ul v-show="!collapsed.status" class="menu menu-sm w-full p-0 px-2 py-0.5 gap-1 -mx-2 animate-fadeIn">
-          <li v-for="status in statuses" :key="status.id">
-            <button
-              type="button"
-              @click="selectStatus(status.id)"
-              class="flex items-center justify-between py-2.5 px-3 rounded-xl transition-colors duration-200 focus:outline-none"
-              :class="activeStatus === status.id ? 'bg-primary text-primary-content hover:bg-primary focus:bg-primary focus:text-primary-content shadow-lg shadow-primary/20 font-medium' : 'hover:bg-base-content/5 text-base-content/85'"
-            >
-              <div class="flex items-center gap-3">
-                <component :is="status.icon" class="h-4 w-4" />
-                <span>{{ status.label }}</span>
-              </div>
-              <span
-                class="badge badge-sm border-none font-semibold"
-                :class="activeStatus === status.id ? 'bg-primary-content text-primary' : 'bg-base-300 text-base-content/70'"
+        <div v-show="!collapsed.status" class="overflow-y-auto max-h-[380px] sm:max-h-[460px] px-2 -mx-2 pr-1 animate-fadeIn">
+          <ul class="menu menu-sm w-full p-0 gap-0.5">
+            <li v-for="status in statuses" :key="status.id">
+              <button
+                type="button"
+                @click="selectStatus(status.id)"
+                class="flex items-center justify-between py-2 px-2.5 rounded-xl transition-colors duration-200 focus:outline-none"
+                :class="activeStatus === status.id ? 'bg-primary text-primary-content hover:bg-primary focus:bg-primary focus:text-primary-content shadow-lg shadow-primary/20 font-medium' : 'hover:bg-base-content/5 text-base-content/85'"
               >
-                {{ getStatusCount(status.id) }}
-              </span>
-            </button>
-          </li>
-        </ul>
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <component
+                    :is="status.icon"
+                    class="h-4 w-4 shrink-0 transition-transform duration-200"
+                    :class="activeStatus === status.id ? 'text-primary-content' : status.iconClass"
+                  />
+                  <span class="truncate text-xs">{{ status.label }}</span>
+                </div>
+                <span
+                  class="badge badge-sm border-none font-semibold shrink-0"
+                  :class="activeStatus === status.id ? 'bg-primary-content text-primary' : 'bg-base-300 text-base-content/70'"
+                >
+                  {{ getStatusCount(status.id) }}
+                </span>
+              </button>
+            </li>
+          </ul>
+        </div>
       </template>
 
       <!-- Section: Categories -->
@@ -340,15 +346,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed } from 'vue';
+import { useAppStore } from '@/stores/app';
 import { useTorrentStore } from '@/stores/torrent';
 import { useI18n } from '@/i18n/useI18n';
 import {
-  InboxIcon,
-  DownloadIcon,
-  UploadIcon,
+  ShuffleIcon,
+  ChevronsDownIcon,
+  ChevronsUpIcon,
+  CheckCheckIcon,
+  PlayIcon,
+  SquareIcon,
+  ArrowUpDownIcon,
+  ArrowDownUpIcon,
   PauseIcon,
   RefreshCwIcon,
+  MoveIcon,
   AlertCircleIcon,
   ListOrderedIcon,
   FolderIcon,
@@ -360,6 +373,7 @@ import {
   ChevronDownIcon,
   HardDriveIcon,
 } from 'lucide-vue-next';
+import { matchTorrentStatus } from '@/utils/torrentStatus';
 
 const props = defineProps<{
   activeStatus: string;
@@ -377,83 +391,36 @@ const emit = defineEmits<{
   (e: 'update:activeSavePath', value: string): void;
 }>();
 
+const appStore = useAppStore();
 const torrentStore = useTorrentStore();
 const { t } = useI18n();
 
-const STORAGE_ORDER_KEY = 'torrenta_sidebar_sections_order';
-const STORAGE_HIDDEN_KEY = 'torrenta_sidebar_sections_hidden';
-const defaultOrder = ['status', 'category', 'tag', 'savepath', 'tracker'];
-
-const sectionsOrder = ref<string[]>([]);
-const hiddenSections = ref<string[]>([]);
-
-// Load order and hidden config from localStorage
-const storedOrder = localStorage.getItem(STORAGE_ORDER_KEY);
-if (storedOrder) {
-  try {
-    sectionsOrder.value = JSON.parse(storedOrder);
-  } catch {
-    sectionsOrder.value = [...defaultOrder];
-  }
-} else {
-  sectionsOrder.value = [...defaultOrder];
-}
-// Merge key guarantee
-defaultOrder.forEach((id) => {
-  if (!sectionsOrder.value.includes(id)) {
-    sectionsOrder.value.push(id);
-  }
-});
-
-const storedHidden = localStorage.getItem(STORAGE_HIDDEN_KEY);
-if (storedHidden) {
-  try {
-    hiddenSections.value = JSON.parse(storedHidden);
-  } catch {
-    hiddenSections.value = [];
-  }
-} else {
-  hiddenSections.value = [];
-}
-
 const visibleSections = computed(() => {
-  return sectionsOrder.value.filter((id) => id === 'status' || !hiddenSections.value.includes(id));
+  return appStore.sidebarOrder.filter((id) => id === 'status' || !appStore.sidebarHidden.includes(id));
 });
 
-// Collapsible states persistence
-const STORAGE_KEY = 'torrenta_sidebar_collapsed';
-const collapsed = ref({
-  status: false,
-  category: true,
-  tag: true,
-  savepath: false,
-  tracker: false,
-});
+const collapsed = computed(() => appStore.sidebarCollapsed);
 
-// Load collapsed states from localStorage
-const storedCollapsed = localStorage.getItem(STORAGE_KEY);
-if (storedCollapsed) {
-  try {
-    const parsed = JSON.parse(storedCollapsed);
-    Object.assign(collapsed.value, parsed);
-  } catch (e) {
-    console.error('Failed to parse sidebar collapsed states:', e);
-  }
-}
-
-function toggleCollapse(key: keyof typeof collapsed.value) {
-  collapsed.value[key] = !collapsed.value[key];
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(collapsed.value));
+function toggleCollapse(key: string) {
+  appStore.toggleSidebarCollapsed(key);
 }
 
 const statuses = computed(() => [
-  { id: 'all', label: t('sidebar.all'), icon: InboxIcon },
-  { id: 'downloading', label: t('sidebar.downloading'), icon: DownloadIcon },
-  { id: 'seeding', label: t('sidebar.seeding'), icon: UploadIcon },
-  { id: 'paused', label: t('sidebar.paused'), icon: PauseIcon },
-  { id: 'checking', label: t('sidebar.checking'), icon: RefreshCwIcon },
-  { id: 'error', label: t('sidebar.error'), icon: AlertCircleIcon },
-  { id: 'queued', label: t('sidebar.queued'), icon: ListOrderedIcon },
+  { id: 'all', label: t('sidebar.all'), icon: ShuffleIcon, iconClass: 'text-amber-500' },
+  { id: 'downloading', label: t('sidebar.downloading'), icon: ChevronsDownIcon, iconClass: 'text-orange-500' },
+  { id: 'seeding', label: t('sidebar.seeding'), icon: ChevronsUpIcon, iconClass: 'text-blue-500' },
+  { id: 'completed', label: t('sidebar.completed'), icon: CheckCheckIcon, iconClass: 'text-purple-500' },
+  { id: 'running', label: t('sidebar.running'), icon: PlayIcon, iconClass: 'text-emerald-500' },
+  { id: 'stopped', label: t('sidebar.stopped'), icon: SquareIcon, iconClass: 'text-base-content/50' },
+  { id: 'active', label: t('sidebar.active'), icon: ArrowUpDownIcon, iconClass: 'text-emerald-600 dark:text-emerald-400' },
+  { id: 'inactive', label: t('sidebar.inactive'), icon: ArrowDownUpIcon, iconClass: 'text-rose-500' },
+  { id: 'stalled', label: t('sidebar.stalled'), icon: PauseIcon, iconClass: 'text-sky-500' },
+  { id: 'stalled_uploading', label: t('sidebar.stalled_uploading'), icon: ChevronsUpIcon, iconClass: 'text-blue-400' },
+  { id: 'stalled_downloading', label: t('sidebar.stalled_downloading'), icon: ChevronsDownIcon, iconClass: 'text-emerald-500' },
+  { id: 'checking', label: t('sidebar.checking'), icon: RefreshCwIcon, iconClass: 'text-teal-500' },
+  { id: 'moving', label: t('sidebar.moving'), icon: MoveIcon, iconClass: 'text-cyan-500' },
+  { id: 'error', label: t('sidebar.error'), icon: AlertCircleIcon, iconClass: 'text-red-500' },
+  { id: 'queued', label: t('sidebar.queued'), icon: ListOrderedIcon, iconClass: 'text-indigo-400' },
 ]);
 
 function selectStatus(id: string) {
@@ -478,7 +445,7 @@ function selectSavePath(path: string) {
 
 function getStatusCount(statusId: string): number {
   if (statusId === 'all') return torrentStore.torrents.length;
-  return torrentStore.torrents.filter((t) => t.status === statusId).length;
+  return torrentStore.torrents.filter((t) => matchTorrentStatus(t, statusId)).length;
 }
 
 function getCategoryCount(categoryName: string): number {
@@ -523,15 +490,7 @@ const trackerlesCount = computed(() =>
 
 /** Unique save paths with counts */
 const savePathEntries = computed(() => {
-  const map = new Map<string, number>();
-  for (const torrent of torrentStore.torrents) {
-    const path = torrent.savepath || '';
-    if (!path) continue;
-    map.set(path, (map.get(path) ?? 0) + 1);
-  }
-  return [...map.entries()]
-    .map(([path, count]) => ({ path, count }))
-    .sort((a, b) => b.count - a.count || a.path.localeCompare(b.path));
+  return torrentStore.torrentSavePaths;
 });
 
 function formatSavePath(path: string, maxLength: number = 22): string {

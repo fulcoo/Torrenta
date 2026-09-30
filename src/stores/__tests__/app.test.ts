@@ -137,4 +137,56 @@ describe('appStore', () => {
     expect(store.autoDeleteMode).toBe(1);
     expect(safeStorage.getItem('torrenta_auto_delete_mode')).toBe('1');
   });
+
+  it('should manage sidebar order, hidden, and collapsed states', () => {
+    const store = useAppStore();
+
+    store.setSidebarOrder(['category', 'status', 'tag']);
+    expect(store.sidebarOrder).toEqual(['category', 'status', 'tag']);
+    expect(safeStorage.getJSON('torrenta_sidebar_sections_order', [])).toEqual(['category', 'status', 'tag']);
+
+    store.setSidebarHidden(['tracker', 'savepath']);
+    expect(store.sidebarHidden).toEqual(['tracker', 'savepath']);
+    expect(safeStorage.getJSON('torrenta_sidebar_sections_hidden', [])).toEqual(['tracker', 'savepath']);
+
+    store.toggleSidebarCollapsed('category');
+    expect(store.sidebarCollapsed.category).toBe(false); // Default was true, toggled to false
+    expect(safeStorage.getJSON('torrenta_sidebar_collapsed', {} as any).category).toBe(false);
+  });
+
+  it('should hydrate settings from server via loadServerSettings', async () => {
+    const store = useAppStore();
+
+    const mockSettings = {
+      appearance: { theme: 'cyberpunk', locale: 'zh' },
+      category_mapping: {
+        categoryConfigs: [{ name: 'Movies', paths: ['/media/movies'] }],
+      },
+      sidebar: {
+        order: ['tag', 'category', 'status'],
+        hidden: ['savepath'],
+        collapsed: { status: true },
+      },
+      task_defaults: {
+        autoTMM: false,
+        downloadPath: '/data/downloads',
+      },
+    };
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(mockSettings),
+    }));
+
+    await store.loadServerSettings();
+
+    expect(store.theme).toBe('cyberpunk');
+    expect(store.locale).toBe('zh');
+    expect(store.categoryConfigs).toEqual([{ name: 'Movies', paths: ['/media/movies'] }]);
+    expect(store.sidebarOrder).toEqual(['tag', 'category', 'status']);
+    expect(store.sidebarHidden).toEqual(['savepath']);
+    expect(store.autoTMM).toBe(false);
+    expect(store.downloadPath).toBe('/data/downloads');
+  });
 });
+

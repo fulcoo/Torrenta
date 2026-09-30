@@ -5,7 +5,8 @@ export interface UnifiedTorrent {
   size: number;          // Total size of payload in Bytes
   downloadSpeed: number; // Current ingestion velocity in Bytes/sec
   uploadSpeed: number;   // Current swarm broadcasting velocity in Bytes/sec
-  status: 'downloading' | 'paused' | 'seeding' | 'checking' | 'error' | 'queued';
+  status: 'downloading' | 'paused' | 'seeding' | 'checking' | 'error' | 'queued' | 'moving';
+  rawState?: string;     // Underlying downloader state (e.g. stalledUP, stalledDL, etc.)
   eta: number;           // Estimated time of arrival / completion in seconds
   category: string;      // User-assigned organization category
   ratio: number;         // Share/Seeding ratio

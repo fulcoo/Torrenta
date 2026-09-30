@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+vuetorrent_settings_details.md
+test_torrent_a.torrent
+
+# Build & packaging artifacts
+bin/
+fpk_src/
+release/
+*.fpk
