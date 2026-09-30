@@ -47,9 +47,45 @@ Torrenta 现已全面支持 **飞牛私有云 (fnOS)** 原生 FPK 应用包格�
    - 登录飞牛 fnOS 桌面，打开 **应用中心** -> 点击右上角 **安装** / **手动安装**。
    - 选择下载的 `.fpk` 文件并上传。
    - 在弹出的**图形化安装向导**中，按需设置 Torrenta 访问端口（默认: `18322`）以及 qBittorrent 端口（默认: `8080`）。
-3. **即点即用**：安装完成后，飞牛桌面将自动生成 Torrenta 图标，点击即可直接进入现代化管理面板！
+3. **安全与最小权限**：
+   - Torrenta 严格遵循 Linux/fnOS **最小权限安全规范**（`run-as: package`），作为无特权的隔离沙盒用户运行，绝不索取 NAS 的 `root` 最高权限。
+4. **即点即用**：安装完成后，飞牛桌面将自动生成 Torrenta 图标，点击即可直接进入现代化管理面板！
 
 > 💡 **开发者打包**：项目根目录执行 `npm run build:fpk`，即可全自动完成图标生成、前端编译与 FPK 打包（产物位于 `release/` 目录）。
+
+---
+
+### ⚙️ qBittorrent 服务端配置说明 (关键)
+
+#### 方案 A：远程一键自动脚本（推荐，免手动修改）
+在飞牛 NAS 或 Linux 终端中执行以下一键命令，脚本将自动定位 qBittorrent 容器、判断是否已配置、备份旧配置、安全注入参数并自动重启：
+
+```bash
+# 官方源执行：
+bash <(curl -sSL https://raw.githubusercontent.com/fulcoo/Torrenta/main/scripts/auto_config_qb.sh)
+
+# 国内加速源执行：
+bash <(curl -sSL https://ghproxy.net/https://raw.githubusercontent.com/fulcoo/Torrenta/main/scripts/auto_config_qb.sh)
+```
+> 💡 **智能幂等设计**：若您已经手动或曾经配置过，脚本会自动识别并提示 `已包含免密与反向代理放行配置，无需重复修改`，绝不重复重启或误改。
+
+#### 方案 B：手动修改配置文件
+向您的 `qBittorrent.conf` 的 `[Preferences]` 段落中添加如下配置（如 Docker 部署，在挂载的 `config/qBittorrent/qBittorrent.conf` 中修改）：
+
+```ini
+[Preferences]
+WebUI\HostHeaderValidation=false
+WebUI\CSRFProtection=false
+WebUI\LocalHostAuth=false
+WebUI\AuthSubnetWhitelistEnabled=true
+WebUI\AuthSubnetWhitelist=127.0.0.1/32, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
+```
+
+> 💡 **参数作用**：
+> * `WebUI\HostHeaderValidation=false` 与 `WebUI\CSRFProtection=false`：彻底解除跨域与域名标头拦截，使 NPM、网关或 Torrenta 本地反向代理能顺畅通信，杜绝 401 Unauthorized 报错。
+> * `WebUI\LocalHostAuth=false`：**允许 127.0.0.1 本地回环免密登录**。由于 Torrenta 运行在飞牛本地并通过代理与 qB 通信，开启后无需反复查找 qB 5.x 的动态临时密码。
+>
+> ⚠️ **手动修改注意**：手动修改 `qBittorrent.conf` 前**必须先停止 qBittorrent 容器/服务**（如 `docker stop <容器名>`），修改保存后再启动；若在运行中直接修改，qBittorrent 退出时会用内存数据覆盖文件导致修改丢失。
 
 ---
 

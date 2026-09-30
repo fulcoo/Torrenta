@@ -105,12 +105,12 @@ def main():
 
     # 4.2 写入 manifest 清单 (统一从 package.json 读取版本号，实现单一数据源维护)
     pkg_path = os.path.join(ROOT_DIR, "package.json")
-    app_version = "0.2.0"
+    app_version = "0.2.4"
     if os.path.exists(pkg_path):
         try:
             with open(pkg_path, "r", encoding="utf-8") as pf:
                 pkg_data = json.load(pf)
-                app_version = pkg_data.get("version", "0.2.0")
+                app_version = pkg_data.get("version", "0.2.4")
         except Exception as e:
             print(f"⚠️ 读取 package.json 版本号失败，使用默认版本: {e}")
 
@@ -184,6 +184,11 @@ def main():
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "server.py"), os.path.join(app_dir, "server.py"))
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "server.py"), os.path.join(app_ui_dir, "server.py"))
 
+    # 复制 auto_config_qb.sh 自动化配置脚本
+    shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(FPK_SRC_DIR, "auto_config_qb.sh"))
+    shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(app_dir, "auto_config_qb.sh"))
+    shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(app_ui_dir, "auto_config_qb.sh"))
+
     # 4.4 组装 wizard 安装向导 (严格遵循飞牛 fnOS 官方规范)
     wizard_dir = os.path.join(FPK_SRC_DIR, "wizard")
     os.makedirs(wizard_dir, exist_ok=True)
@@ -245,7 +250,7 @@ def main():
     with open(os.path.join(wizard_dir, "upgrade_uifile"), "wb") as f:
         f.write(wizard_json_str.encode("utf-8"))
 
-    # 4.5 组装 config (权限与系统资源)
+    # 4.5 组装 config (权限与系统资源 - 遵循最小权限原则 run-as package)
     config_dir = os.path.join(FPK_SRC_DIR, "config")
     os.makedirs(config_dir, exist_ok=True)
     privilege_content = '{\n    "defaults": {\n        "run-as": "package"\n    }\n}\n'

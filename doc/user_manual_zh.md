@@ -31,6 +31,35 @@ Torrenta 已原生适配飞牛私有云（fnOS）官方 FPK 规范。该模式�
    - **qBittorrent 端口**（默认 `8080`）：指定飞牛系统上运行的 qBittorrent 服务端口。
 6. 点击完成安装，安装就绪后点击桌面图标即可开启体验。
 
+### 🔒 安全与权限设计 (Principle of Least Privilege)
+Torrenta 严格遵循飞牛私有云官方安全规范（`run-as: package`）：
+* 作为独立的无特权隔离用户（`pkg-torrenta`）运行，**不索取任何系统 root 最高权限**，保障 NAS 系统与数据绝对安全。
+* 由于安全沙盒隔离，Torrenta 不会跨界越权修改其他 Docker 容器的私有目录。用户只需按照下方说明对 qBittorrent 进行一次基础免密/反代放行设置即可。
+
+### ⚙️ qBittorrent 免密与反向代理放行配置
+由于 qBittorrent 5.x 移除了默认密码，为了让 Torrenta 顺畅免密通信，请选择以下任一方式进行配置（仅需配置一次）：
+
+#### 方案一：执行远程一键自动化脚本（推荐）
+在终端中以 root 身份执行如下命令，脚本将自动完成容器探测、安全备份、注入参数及平滑重启：
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/fulcoo/Torrenta/main/scripts/auto_config_qb.sh)
+# 国内加速：
+bash <(curl -sSL https://ghproxy.net/https://raw.githubusercontent.com/fulcoo/Torrenta/main/scripts/auto_config_qb.sh)
+```
+> 💡 若您已经配置过，脚本会自动识别并安全退出，不进行重复修改。
+
+#### 方案二：手动修改 `qBittorrent.conf`
+先停止 qBittorrent 容器（`docker stop <容器名>`），在挂载目录的 `qBittorrent.conf` 的 `[Preferences]` 下添加：
+```ini
+[Preferences]
+WebUI\HostHeaderValidation=false
+WebUI\CSRFProtection=false
+WebUI\LocalHostAuth=false
+WebUI\AuthSubnetWhitelistEnabled=true
+WebUI\AuthSubnetWhitelist=127.0.0.1/32, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
+```
+保存后重新启动容器（`docker start <容器名>`）即可。
+
 ### 🛠️ 开发者/源码打包
 如果您自行拉取了源码，可一键完成打包：
 ```bash

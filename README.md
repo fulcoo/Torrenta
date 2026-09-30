@@ -70,9 +70,43 @@ Torrenta natively supports **fnOS (FeiniOS)** through official `.fpk` applicatio
    - Open **App Center** on your fnOS desktop -> Click **Install** / **Manual Install** in the top right corner.
    - Upload the `.fpk` file.
    - Follow the **graphical wizard** to customize your desired Torrenta WebUI port (Default: `18322`) and qBittorrent port (Default: `8080`).
-3. **Launch**: A desktop shortcut with official high-res icons will be created automatically. Click to open and enjoy!
+3. **Security & Least Privilege**:
+   - Torrenta strictly adheres to the **Principle of Least Privilege** (`run-as: package`), executing in an unprivileged sandbox user environment without requesting root permissions.
+4. **Launch**: A desktop shortcut with official high-res icons will be created automatically. Click to open and enjoy!
 
 > 💡 **Developer Build**: Run `npm run build:fpk` in the root folder to automate icon generation, frontend compilation, and FPK assembly (output saved in `release/`).
+
+---
+
+### ⚙️ qBittorrent Server Configuration Requirements
+
+Due to qBittorrent 5.x removing default credentials and strictly enforcing **Host Header Validation** and **CSRF Protection**, we recommend the following setup options:
+
+#### Option A: One-Liner Auto-Configuration Script (Recommended)
+Run the following command in your terminal to automatically detect, backup, inject configurations, and restart qBittorrent:
+
+```bash
+bash <(curl -sSL https://raw.githubusercontent.com/fulcoo/Torrenta/main/scripts/auto_config_qb.sh)
+```
+> 💡 **Idempotent & Safe**: If your qBittorrent is already configured, the script detects it and exits immediately without making redundant changes or restarts.
+
+#### Option B: Manual Configuration
+Add the following settings to your `qBittorrent.conf` under `[Preferences]` (for Docker, modify `config/qBittorrent/qBittorrent.conf`):
+
+```ini
+[Preferences]
+WebUI\HostHeaderValidation=false
+WebUI\CSRFProtection=false
+WebUI\LocalHostAuth=false
+WebUI\AuthSubnetWhitelistEnabled=true
+WebUI\AuthSubnetWhitelist=127.0.0.1/32, 192.168.0.0/16, 10.0.0.0/8, 172.16.0.0/12
+```
+
+> 💡 **Why these settings are recommended**:
+> * `WebUI\HostHeaderValidation=false` & `WebUI\CSRFProtection=false`: Bypasses reverse proxy host checking, eliminating `401 Unauthorized` errors when accessed via NPM, domain proxies, or local reverse proxies.
+> * `WebUI\LocalHostAuth=false`: Enables bypass of authentication for `127.0.0.1` loopback traffic, allowing Torrenta to connect smoothly without tracking ephemeral qB 5.x passwords.
+>
+> ⚠️ **Important**: Always **stop the qBittorrent container/service first** (e.g. `docker stop <container>`) before editing `qBittorrent.conf`. Otherwise, qBittorrent will overwrite your file with in-memory data upon shutdown!
 
 ---
 
