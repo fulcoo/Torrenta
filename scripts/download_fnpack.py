@@ -26,18 +26,22 @@ if not os.path.exists(FNPACK_EXE) or os.path.getsize(FNPACK_EXE) < 1000:
         print(f"📦 从本地参考工程复制官方 fnpack: {LOCAL_REF_EXE} -> {FNPACK_EXE}")
         shutil.copyfile(LOCAL_REF_EXE, FNPACK_EXE)
     else:
-        print(f"🌐 正在从飞牛官方下载最新 fnpack 官方打包工具: {URL} ...")
-        req = urllib.request.Request(URL, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req) as resp, open(FNPACK_EXE, "wb") as f:
-            f.write(resp.read())
-            
-    if sys.platform != "win32":
-        os.chmod(FNPACK_EXE, 0o755)
-    print(f"✅ fnpack 官方工具就绪: {FNPACK_EXE} ({os.path.getsize(FNPACK_EXE)} 字节)")
+        try:
+            print(f"🌐 正在从飞牛官方下载最新 fnpack 官方打包工具: {URL} ...")
+            req = urllib.request.Request(URL, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=10) as resp, open(FNPACK_EXE, "wb") as f:
+                f.write(resp.read())
+            if sys.platform != "win32":
+                os.chmod(FNPACK_EXE, 0o755)
+            print(f"✅ fnpack 官方工具就绪: {FNPACK_EXE} ({os.path.getsize(FNPACK_EXE)} 字节)")
+        except Exception as e:
+            print(f"⚠️ 下载 fnpack 失败: {e}，将自动切换为 Python 原生打包引擎。")
 
 # 验证运行
-res = subprocess.run([FNPACK_EXE, "--help"], capture_output=True, text=True)
-if res.returncode == 0:
-    print("✅ 飞牛官方 fnpack 工具检测正常")
-else:
-    print("❌ fnpack 运行异常:\n", res.stderr)
+if os.path.exists(FNPACK_EXE):
+    res = subprocess.run([FNPACK_EXE, "--help"], capture_output=True, text=True)
+    if res.returncode == 0:
+        print("✅ 飞牛官方 fnpack 工具检测正常")
+    else:
+        print("❌ fnpack 运行异常:\n", res.stderr)
+

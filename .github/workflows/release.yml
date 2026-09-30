@@ -23,26 +23,35 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-      - name: Build Project
+      - name: Install Dependencies
+        run: |
+          npm install
+          pip install Pillow
+
+      - name: Build WebUI Project
         run: npm run build
 
-      - name: Package Dist for Alternative WebUI
-        # Since `npm run build` outputs to `dist/public`,
-        # we zip the `public` folder inside `dist` so that when extracted,
-        # it extracts into a `public/` directory (e.g. `public/assets/`, `public/index.html`, etc.)
-        # matching what update-torrenta.sh expects.
+      - name: Package Dist for Alternative WebUI (Zip)
         run: |
           cd dist
           zip -r ../torrenta.zip public
 
+      - name: Build Official fnOS FPK Package
+        run: python scripts/build_official_fpk.py
+
       - name: Create GitHub Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: torrenta.zip
+          files: |
+            torrenta.zip
+            release/torrenta.fpk
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

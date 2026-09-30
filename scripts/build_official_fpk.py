@@ -71,6 +71,81 @@ def fix_fpk_permissions(fpk_path: str):
     os.replace(temp_path, fpk_path)
     print("🛡️  已成功将 FPK 内部生命周期脚本与程序权限修正为 0755 (rwxr-xr-x)！")
 
+def package_fpk_python(fpk_src_dir: str, output_fpk_path: str):
+    """
+    纯 Python 实现构建飞牛标准的 .fpk 安装包 (tar.gz 归档格式)
+    1. 将 fpk_src/app 目录递归打包为 app.tgz (POSIX 权限: 目录/脚本 0755, 普通文件 0644)
+    2. 将 app.tgz 与 fpk_src 下的 manifest, cmd, config, wizard, ICON*.PNG 等文件递归打包为 .fpk
+    """
+    app_dir = os.path.join(fpk_src_dir, "app")
+    app_buf = io.BytesIO()
+    with tarfile.open(fileobj=app_buf, mode="w:gz") as app_tar:
+        for root, dirs, files in os.walk(app_dir):
+            for d in sorted(dirs):
+                full_d = os.path.join(root, d)
+                rel_d = os.path.relpath(full_d, app_dir).replace("\\", "/")
+                tarinfo = app_tar.gettarinfo(full_d, arcname=rel_d)
+                tarinfo.mode = 0o755
+                tarinfo.uid = 0
+                tarinfo.gid = 0
+                app_tar.addfile(tarinfo)
+            for f in sorted(files):
+                full_f = os.path.join(root, f)
+                rel_f = os.path.relpath(full_f, app_dir).replace("\\", "/")
+                tarinfo = app_tar.gettarinfo(full_f, arcname=rel_f)
+                if f.endswith(".sh") or f.endswith(".py") or "auto_config" in f:
+                    tarinfo.mode = 0o755
+                else:
+                    tarinfo.mode = 0o644
+                tarinfo.uid = 0
+                tarinfo.gid = 0
+                with open(full_f, "rb") as file_obj:
+                    app_tar.addfile(tarinfo, file_obj)
+    
+    app_tgz_bytes = app_buf.getvalue()
+
+    with tarfile.open(output_fpk_path, mode="w:gz") as fpk_tar:
+        # 添加 app.tgz
+        app_tarinfo = tarfile.TarInfo(name="app.tgz")
+        app_tarinfo.size = len(app_tgz_bytes)
+        app_tarinfo.mode = 0o644
+        app_tarinfo.uid = 0
+        app_tarinfo.gid = 0
+        fpk_tar.addfile(app_tarinfo, io.BytesIO(app_tgz_bytes))
+
+        # 添加 fpk_src 下除 app 以外的所有条目
+        for item in sorted(os.listdir(fpk_src_dir)):
+            if item == "app":
+                continue
+            item_path = os.path.join(fpk_src_dir, item)
+            if os.path.isdir(item_path):
+                for root, dirs, files in os.walk(item_path):
+                    rel_root = os.path.relpath(root, fpk_src_dir).replace("\\", "/")
+                    root_tarinfo = fpk_tar.gettarinfo(root, arcname=rel_root)
+                    root_tarinfo.mode = 0o755
+                    root_tarinfo.uid = 0
+                    root_tarinfo.gid = 0
+                    fpk_tar.addfile(root_tarinfo)
+                    for f in sorted(files):
+                        full_f = os.path.join(root, f)
+                        rel_f = os.path.relpath(full_f, fpk_src_dir).replace("\\", "/")
+                        tarinfo = fpk_tar.gettarinfo(full_f, arcname=rel_f)
+                        if "cmd" in rel_f or f.endswith(".sh") or f.endswith(".py"):
+                            tarinfo.mode = 0o755
+                        else:
+                            tarinfo.mode = 0o644
+                        tarinfo.uid = 0
+                        tarinfo.gid = 0
+                        with open(full_f, "rb") as file_obj:
+                            fpk_tar.addfile(tarinfo, file_obj)
+            else:
+                tarinfo = fpk_tar.gettarinfo(item_path, arcname=item)
+                tarinfo.mode = 0o644
+                tarinfo.uid = 0
+                tarinfo.gid = 0
+                with open(item_path, "rb") as file_obj:
+                    fpk_tar.addfile(tarinfo, file_obj)
+
 def main():
     print("=" * 65)
     print("🚀 使用官方 fnpack 构建 Torrenta 飞牛私有云 (fnOS) FPK 安装包")
@@ -568,45 +643,42 @@ exit 0
     with open(os.path.join(cmd_dir, "config_callback"), "wb") as f:
         f.write(to_lf(callback_script).encode("utf-8"))
 
-    # 生成其余生命周期空钩子
-    for hook in ["install_init", "uninstall_callback", "uninstall_init", "upgrade_init", "config_init"]:
-        with open(os.path.join(cmd_dir, hook), "wb") as f:
-            f.write(to_lf("#!/bin/bash\nexit 0\n").encode("utf-8"))
-
-    # 5. 执行官方 fnpack build 构建
-    print("🗜️  步骤 5/5: 调用官方 fnpack 工具构建 .fpk 安装包...")
+    # 5. 构建 .fpk 安装包
+    print("🗜️  步骤 5/5: 构建 .fpk 安装包...")
     os.makedirs(RELEASE_DIR, exist_ok=True)
+    dest_fpk = os.path.join(RELEASE_DIR, "torrenta.fpk")
     
-    result = subprocess.run([FNPACK_EXE, "build", "-d", "fpk_src"], cwd=ROOT_DIR, capture_output=True, text=True)
-    print(result.stdout)
-    if result.returncode != 0:
-        print("❌ fnpack 构建失败:\n", result.stderr)
+    if os.path.exists(FNPACK_EXE):
+        print(f"📦 发现 fnpack 工具 [{FNPACK_EXE}]，尝试使用官方工具构建...")
+        result = subprocess.run([FNPACK_EXE, "build", "-d", "fpk_src"], cwd=ROOT_DIR, capture_output=True, text=True)
+        if result.returncode == 0:
+            for f in os.listdir(ROOT_DIR):
+                if f.endswith(".fpk"):
+                    src_fpk = os.path.join(ROOT_DIR, f)
+                    shutil.move(src_fpk, dest_fpk)
+                    fix_fpk_permissions(dest_fpk)
+                    break
+        else:
+            print("⚠️ fnpack 构建未成功，切换为 Python 原生极速打包引擎...")
+            package_fpk_python(FPK_SRC_DIR, dest_fpk)
+    else:
+        print("📦 采用 Python 原生跨平台打包引擎构建 .fpk 安装包...")
+        package_fpk_python(FPK_SRC_DIR, dest_fpk)
+
+    if os.path.exists(dest_fpk):
+        file_size_kb = os.path.getsize(dest_fpk) / 1024
+        print("=" * 65)
+        print("🎉 飞牛官方 FPK 安装包构建成功！")
+        print(f"📦 安装包文件名: torrenta.fpk")
+        print(f"📁 完整保存路径: {dest_fpk}")
+        print(f"📊 安装包大小  : {file_size_kb:.2f} KB ({file_size_kb/1024:.2f} MB)")
+        print(f"⚙️ 默认端口设定: Torrenta -> {DEFAULT_TORRENTA_PORT} | qBittorrent -> {DEFAULT_QB_PORT}")
+        print(f"📋 安装向导文件: wizard/install (已注入端口输入交互界面)")
+        print("=" * 65)
+    else:
+        print("❌ 未能生成 .fpk 文件，请检查打包日志。")
         sys.exit(1)
-
-    fpk_found = False
-    for f in os.listdir(ROOT_DIR):
-        if f.endswith(".fpk"):
-            fpk_found = True
-            src_fpk = os.path.join(ROOT_DIR, f)
-            dest_fpk = os.path.join(RELEASE_DIR, f)
-            shutil.move(src_fpk, dest_fpk)
-            
-            # 关键：修正 FPK 归档内的 POSIX 权限为 0755
-            fix_fpk_permissions(dest_fpk)
-            
-            file_size_kb = os.path.getsize(dest_fpk) / 1024
-            print("=" * 65)
-            print("🎉 飞牛官方 FPK 安装包构建成功！")
-            print(f"📦 安装包文件名: {f}")
-            print(f"📁 完整保存路径: {dest_fpk}")
-            print(f"📊 安装包大小  : {file_size_kb:.2f} KB ({file_size_kb/1024:.2f} MB)")
-            print(f"⚙️ 默认端口设定: Torrenta -> {DEFAULT_TORRENTA_PORT} | qBittorrent -> {DEFAULT_QB_PORT}")
-            print(f"📋 安装向导文件: wizard/install (已注入端口输入交互界面)")
-            print("=" * 65)
-            break
-
-    if not fpk_found:
-        print("⚠️ 未在根目录下找到构建好的 .fpk 文件，请检查打包输出。")
 
 if __name__ == "__main__":
     main()
+

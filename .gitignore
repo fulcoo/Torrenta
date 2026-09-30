@@ -30,3 +30,6 @@ bin/
 fpk_src/
 release/
 *.fpk
+__pycache__/
+*.pyc
+
