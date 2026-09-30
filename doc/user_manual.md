@@ -7,15 +7,42 @@ This manual provides detailed instructions on various deployment options, config
 ---
 
 ## 🚀 Table of Contents
-1. [Docker Mode (Recommended - Zero CORS & Zero Cookie Setup)](#1-docker-mode-recommended---zero-cors--zero-cookie-setup)
-2. [Alternative WebUI Mode (Same-Origin Native Integration)](#2-alternative-webui-mode-same-origin-native-integration)
-3. [Standalone Mode (Cross-Origin Setup)](#3-standalone-mode-cross-origin-setup)
-4. [Automatic Updates Setup](#4-automatic-updates-setup)
-5. [Troubleshooting & FAQ](#5-troubleshooting--faq)
+1. [FeiniOS (fnOS) FPK Native Mode (Recommended)](#1-feinios-fnos-fpk-native-mode-recommended)
+2. [Docker Mode (Zero CORS & Zero Cookie Setup)](#2-docker-mode-zero-cors--zero-cookie-setup)
+3. [Alternative WebUI Mode (Same-Origin Native Integration)](#3-alternative-webui-mode-same-origin-native-integration)
+4. [Standalone Mode (Cross-Origin Setup)](#4-standalone-mode-cross-origin-setup)
+5. [Automatic Updates Setup](#5-automatic-updates-setup)
+6. [Troubleshooting & FAQ](#6-troubleshooting--faq)
 
 ---
 
-## 1. Docker Mode (Recommended - Zero CORS & Zero Cookie Setup)
+## 1. FeiniOS (fnOS) FPK Native Mode (Recommended)
+
+Torrenta natively adheres to the official fnOS (FeiniOS) FPK application packaging specification:
+- **Native OS Integration**: Installs, upgrades, launches, and uninstalls just like any native fnOS app in App Center, complete with high-resolution desktop shortcuts.
+- **Interactive Setup Wizard**: Allows specifying your custom Torrenta WebUI port (Default: `18322`) and target qBittorrent port (Default: `8080`) during installation or upgrade.
+- **Embedded Python Daemon Proxy**: Runs an optimized lightweight daemon server that transparently proxies API traffic and headers to avoid any CORS or cookie restrictions.
+
+### 📝 Step-by-Step Guide
+1. Go to [GitHub Releases](https://github.com/fulcoo/Torrenta/releases) and download the latest `torrenta-x.x.x.fpk` file.
+2. Log into your fnOS desktop and open **App Center**.
+3. Click **Install** / **Manual Install** in the top-right corner.
+4. Choose and upload the downloaded `.fpk` file.
+5. In the installation wizard:
+   - **Torrenta WebUI Port** (Default: `18322`): Set the port used to open Torrenta.
+   - **qBittorrent Port** (Default: `8080`): Set the local qBittorrent WebUI port on your NAS.
+6. Click install. Once finished, click the desktop icon to open Torrenta!
+
+### 🛠️ Developer / Source Build
+If you are building from source, simply run:
+```bash
+npm run build:fpk
+```
+The packaging script will generate icons, compile the frontend, fix Linux file permissions, and build the official `.fpk` inside the `release/` directory.
+
+---
+
+## 2. Docker Mode (Zero CORS & Zero Cookie Setup)
 
 Deploying Torrenta as a Docker container is the simplest and most robust setup. By utilizing a built-in Nginx reverse proxy, static frontend assets and downloader APIs are unified under a single host and port. **This completely bypasses browser CORS blockages and SameSite Cookie restrictions.**
 
@@ -40,7 +67,7 @@ Deploying Torrenta as a Docker container is the simplest and most robust setup. 
 
 ---
 
-## 2. Alternative WebUI Mode (Same-Origin Native Integration)
+## 3. Alternative WebUI Mode (Same-Origin Native Integration)
 
 If you prefer not to run a separate web server container, you can compile Torrenta into static assets and load them natively inside qBittorrent.
 
@@ -60,17 +87,17 @@ If you prefer not to run a separate web server container, you can compile Torren
 
 ---
 
-## 3. Standalone Mode (Cross-Origin Setup)
+## 4. Standalone Mode (Cross-Origin Setup)
 
 If you are hosting Torrenta on a separate static site server (like GitHub Pages, Cloudflare Pages, or another custom host/port), you must configure cross-origin settings.
 
 ### ⚠️ Critical Notes
 *   **CORS Settings**: You must log in to the native qBittorrent WebUI, navigate to **Settings** -> **Web UI**, enable **"Enable Cross-Origin Resource Sharing (CORS)"**, and add your Torrenta domain to the whitelist (or turn off **"Verify Web User Interface Host header"**).
-*   **SameSite Cookie Policy**: Modern browsers restrict cross-site session cookies by default. When connecting across different ports or domains (e.g., `http://localhost:5173` connecting to `http://localhost:8080`), browser policies might block the session cookie (`SID`). **Therefore, we highly recommend using [Docker Mode](#1-docker-mode-recommended---zero-cors--zero-cookie-setup) or [Alternative WebUI Mode](#2-alternative-webui-mode-same-origin-native-integration) instead.**
+*   **SameSite Cookie Policy**: Modern browsers restrict cross-site session cookies by default. When connecting across different ports or domains (e.g., `http://localhost:5173` connecting to `http://localhost:8080`), browser policies might block the session cookie (`SID`). **Therefore, we highly recommend using [fnOS FPK Mode](#1-feinios-fnos-fpk-native-mode-recommended) or [Docker Mode](#2-docker-mode-zero-cors--zero-cookie-setup) instead.**
 
 ---
 
-## 4. Automatic Updates Setup
+## 5. Automatic Updates Setup
 
 ### 🐳 A. Docker Standalone Mode
 - **Method 1: Automatic via Watchtower**
@@ -99,7 +126,7 @@ For users running Torrenta locally inside qBittorrent, we provide an automatic s
 
 ---
 
-## 5. Troubleshooting & FAQ
+## 6. Troubleshooting & FAQ
 
 ### Q1: The WebUI shows "Disconnected" or returns 403 Forbidden?
 *   **Clear Web Settings**: If you are using the Docker proxy mode, click "Settings" in Torrenta, look for the **Connection URL / WebUI URL**, **clear it completely**, and click Save.

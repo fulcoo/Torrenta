@@ -61,7 +61,22 @@ Torrenta's Docker deployment **removes all these barriers**:
 
 This is a quick start guide. For advanced topics like manual installation, alternate WebUI setups, and cron scripting for automatic updates, please read the 👉 **[Detailed User Manual](doc/user_manual.md)**.
 
-### 🐳 Run via Docker (Recommended)
+### 🚀 Run natively on FeiniOS (fnOS) via FPK (Recommended for fnOS)
+
+Torrenta natively supports **fnOS (FeiniOS)** through official `.fpk` application packages. You can install and manage Torrenta directly from the fnOS App Center with an interactive setup wizard:
+
+1. **Download Package**: Grab the latest `torrenta-x.x.x.fpk` from [GitHub Releases](https://github.com/fulcoo/Torrenta/releases).
+2. **Offline Install**:
+   - Open **App Center** on your fnOS desktop -> Click **Install** / **Manual Install** in the top right corner.
+   - Upload the `.fpk` file.
+   - Follow the **graphical wizard** to customize your desired Torrenta WebUI port (Default: `18322`) and qBittorrent port (Default: `8080`).
+3. **Launch**: A desktop shortcut with official high-res icons will be created automatically. Click to open and enjoy!
+
+> 💡 **Developer Build**: Run `npm run build:fpk` in the root folder to automate icon generation, frontend compilation, and FPK assembly (output saved in `release/`).
+
+---
+
+### 🐳 Run via Docker
 
 You can run Torrenta directly by pulling the official Docker image `fulcoo/torrenta:latest` from Docker Hub:
 

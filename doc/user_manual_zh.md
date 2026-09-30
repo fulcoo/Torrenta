@@ -5,15 +5,42 @@
 ---
 
 ## 🚀 目录
-1. [Docker 模式（推荐 - 零跨域/零Cookie配置）](#1-docker-模式推荐---零跨域零cookie配置)
-2. [备用 WebUI 模式（同源原生整合）](#2-备用-webui-模式同源原生整合)
-3. [独立跨源模式（Standalone Mode）](#3-独立跨源模式standalone-mode)
-4. [自动更新设置](#4-自动更新设置)
-5. [常见问题与排错（FAQ）](#5-常见问题与排错faq)
+1. [飞牛私有云 (fnOS) FPK 原生安装模式（推荐）](#1-飞牛私有云-fnos-fpk-原生安装模式推荐)
+2. [Docker 模式（零跨域/零Cookie配置）](#2-docker-模式零跨域零cookie配置)
+3. [备用 WebUI 模式（同源原生整合）](#3-备用-webui-模式同源原生整合)
+4. [独立跨源模式（Standalone Mode）](#4-独立跨源模式standalone-mode)
+5. [自动更新设置](#5-自动更新设置)
+6. [常见问题与排错（FAQ）](#6-常见问题与排错faq)
 
 ---
 
-## 1. Docker 模式（推荐 - 零跨域/零Cookie配置）
+## 1. 飞牛私有云 (fnOS) FPK 原生安装模式（推荐）
+
+Torrenta 已原生适配飞牛私有云（fnOS）官方 FPK 规范。该模式具备以下优势：
+- **原生 App 体验**：在飞牛应用中心中像系统应用一样一键安装、升级、启动/停止或卸载，并在 fnOS 桌面生成高分辨率应用图标。
+- **可视化向导**：安装或升级时支持通过图形化向导界面自定义 Torrenta 访问端口与关联的 qBittorrent 端口。
+- **智能代理与反代**：内置优化的 Python 守护服务，自动进行同源代理与 Header 欺骗，免除一切跨域（CORS）与 Cookie 会话拦截问题。
+
+### 📝 安装步骤
+1. 前往 GitHub [Releases 页面](https://github.com/fulcoo/Torrenta/releases) 下载最新发布的 `torrenta-x.x.x.fpk` 文件。
+2. 登录飞牛 fnOS 桌面，打开 **应用中心**。
+3. 点击右上角的 **安装** 或 **手动安装 (离线安装)**。
+4. 选择并上传已下载的 `.fpk` 文件。
+5. 在向导页面中配置：
+   - **Torrenta 访问端口**（默认 `18322`）：指定 Torrenta WebUI 的访问端口。
+   - **qBittorrent 端口**（默认 `8080`）：指定飞牛系统上运行的 qBittorrent 服务端口。
+6. 点击完成安装，安装就绪后点击桌面图标即可开启体验。
+
+### 🛠️ 开发者/源码打包
+如果您自行拉取了源码，可一键完成打包：
+```bash
+npm run build:fpk
+```
+打包脚本将自动完成图标裁剪、前端编译、权限矫正及 FPK 打包，安装包将输出至 `release/` 目录。
+
+---
+
+## 2. Docker 模式（零跨域/零Cookie配置）
 
 通过 Docker 容器化部署是使用 Torrenta 最简单、最稳健的方式。我们在容器内内置了 Nginx 反向代理，将静态前端文件与 API 后台合并到单一来源（同一端口），**完美绕过了浏览器的 CORS 拦截和 SameSite Cookie 限制**。
 
@@ -38,7 +65,7 @@
 
 ---
 
-## 2. 备用 WebUI 模式（同源原生整合）
+## 3. 备用 WebUI 模式（同源原生整合）
 
 如果您不想运行单独的网页容器，可以将 Torrenta 编译为静态文件，直接作为 qBittorrent 的备选 UI。
 
@@ -58,17 +85,17 @@
 
 ---
 
-## 3. 独立跨源模式（Standalone Mode）
+## 4. 独立跨源模式（Standalone Mode）
 
 如果您将 Torrenta 托管在一个单独的静态网页服务器（如 GitHub Pages、Cloudflare Pages 或其他独立端口）上，需要进行跨域适配。
 
 ### ⚠️ 注意事项
 *   **跨域配置 (CORS)**：您必须登录 qBittorrent WebUI，在“设置” -> “Web UI” 中启用 **“启用跨源资源共享 (CORS)”**，并将 Torrenta 的域名加入白名单，或者关闭 **“验证 Web 用户界面主机标头”**。
-*   **SameSite Cookie 限制**：由于主流浏览器默认拦截跨站的 Session Cookie，如果您使用的是跨域名/跨端口方式（如 `http://localhost:5173` 访问 `http://localhost:8080`），登录会话 Cookie (`SID`) 可能会被浏览器拦截导致请求反复失败。**因此，更推荐使用 [Docker 模式](#1-docker-模式推荐---零跨域零cookie配置) 或 [备用 WebUI 模式](#2-备用-webui-模式同源原生整合)**。
+*   **SameSite Cookie 限制**：由于主流浏览器默认拦截跨站的 Session Cookie，如果您使用的是跨域名/跨端口方式（如 `http://localhost:5173` 访问 `http://localhost:8080`），登录会话 Cookie (`SID`) 可能会被浏览器拦截导致请求反复失败。**因此，更推荐使用 [飞牛 FPK 模式](#1-飞牛私有云-fnos-fpk-原生安装模式推荐) 或 [Docker 模式](#2-docker-模式零跨域零cookie配置)**。
 
 ---
 
-## 4. 自动更新设置
+## 5. 自动更新设置
 
 ### 🐳 A. Docker 模式自动更新
 - **方法一：使用 Watchtower（全自动）**
@@ -97,7 +124,7 @@
 
 ---
 
-## 5. 常见问题与排错（FAQ）
+## 6. 常见问题与排错（FAQ）
 
 ### Q1：页面一直显示“未连接 (Disconnected)”或返回 403 Forbidden？
 *   **检查网页设置**：如果您使用的是 Docker 代理模式，请点击 Torrenta 页面侧边栏的“设置”，检查 **连接地址 (Connection URL)**。如果里面有内容（例如 `http://127.0.0.1:8081`），**必须将其全部删除清空**并保存。

@@ -38,7 +38,22 @@
 
 这里是极简启动指南。如需查看完整的 **CORS 跨域排错**、**本地备用 WebUI 安装** 或 **定时自动更新脚本配置**，请参阅 👉 **[详细安装与使用手册](doc/user_manual_zh.md)**。
 
-### 🐳 使用 Docker 运行（推荐）
+### 🚀 飞牛私有云 fnOS 原生应用安装（推荐）
+
+Torrenta 现已全面支持 **飞牛私有云 (fnOS)** 原生 FPK 应用包格式，无需配置繁琐的 Docker 参数，即可在应用中心一键离线安装与管理。
+
+1. **下载安装包**：前往 [Releases 页面](https://github.com/fulcoo/Torrenta/releases) 下载最新版本的 `torrenta-x.x.x.fpk`。
+2. **离线安装**：
+   - 登录飞牛 fnOS 桌面，打开 **应用中心** -> 点击右上角 **安装** / **手动安装**。
+   - 选择下载的 `.fpk` 文件并上传。
+   - 在弹出的**图形化安装向导**中，按需设置 Torrenta 访问端口（默认: `18322`）以及 qBittorrent 端口（默认: `8080`）。
+3. **即点即用**：安装完成后，飞牛桌面将自动生成 Torrenta 图标，点击即可直接进入现代化管理面板！
+
+> 💡 **开发者打包**：项目根目录执行 `npm run build:fpk`，即可全自动完成图标生成、前端编译与 FPK 打包（产物位于 `release/` 目录）。
+
+---
+
+### 🐳 使用 Docker 运行
 
 目前您可以直接拉取 Docker Hub 上的官方编译镜像 **`fulcoo/torrenta:latest`** 来进行快速部署。
 
@@ -66,6 +81,8 @@ docker run -d \
    docker compose up -d
    ```
 4. 在浏览器中访问 `http://localhost:3000` 即可开始使用！
+
+---
 
 ### 📂 备用 WebUI 编译模式
 
