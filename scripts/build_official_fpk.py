@@ -152,16 +152,12 @@ def main():
     print(f"📌 默认服务端口: {DEFAULT_TORRENTA_PORT} | 默认 qBittorrent 端口: {DEFAULT_QB_PORT}")
     print("=" * 65)
 
-    # 1. 确保打包工具就绪
-    print("📦 步骤 1/5: 检查官方 fnpack 打包工具...")
-    subprocess.run([sys.executable, "scripts/download_fnpack.py"], cwd=ROOT_DIR, check=True)
-
-    # 2. 生成多规格图标
-    print("🎨 步骤 2/5: 从源图生成各规格应用图标...")
+    # 1. 确保图标生成脚本就绪
+    print("🎨 步骤 1/4: 从源图生成各规格应用图标...")
     subprocess.run([sys.executable, "scripts/generate_icons.py"], cwd=ROOT_DIR, check=True)
 
-    # 3. 前端编译检查
-    print("🔨 步骤 3/5: 执行 Vite 前端构建产物检查...")
+    # 2. 前端编译检查
+    print("🔨 步骤 2/4: 执行 Vite 前端构建产物检查...")
     if not os.path.exists(os.path.join(DIST_DIR, "index.html")):
         print("未检测到 index.html，正在执行前端编译 (npm run build)...")
         subprocess.run(["npm", "run", "build"], cwd=ROOT_DIR, shell=True, check=True)
@@ -643,27 +639,13 @@ exit 0
     with open(os.path.join(cmd_dir, "config_callback"), "wb") as f:
         f.write(to_lf(callback_script).encode("utf-8"))
 
-    # 5. 构建 .fpk 安装包
-    print("🗜️  步骤 5/5: 构建 .fpk 安装包...")
+    # 4. 构建 .fpk 安装包
+    print("🗜️  步骤 4/4: 构建 .fpk 安装包...")
     os.makedirs(RELEASE_DIR, exist_ok=True)
     dest_fpk = os.path.join(RELEASE_DIR, "torrenta.fpk")
     
-    if os.path.exists(FNPACK_EXE):
-        print(f"📦 发现 fnpack 工具 [{FNPACK_EXE}]，尝试使用官方工具构建...")
-        result = subprocess.run([FNPACK_EXE, "build", "-d", "fpk_src"], cwd=ROOT_DIR, capture_output=True, text=True)
-        if result.returncode == 0:
-            for f in os.listdir(ROOT_DIR):
-                if f.endswith(".fpk"):
-                    src_fpk = os.path.join(ROOT_DIR, f)
-                    shutil.move(src_fpk, dest_fpk)
-                    fix_fpk_permissions(dest_fpk)
-                    break
-        else:
-            print("⚠️ fnpack 构建未成功，切换为 Python 原生极速打包引擎...")
-            package_fpk_python(FPK_SRC_DIR, dest_fpk)
-    else:
-        print("📦 采用 Python 原生跨平台打包引擎构建 .fpk 安装包...")
-        package_fpk_python(FPK_SRC_DIR, dest_fpk)
+    print("📦 采用 Python 原生跨平台封包引擎构建 .fpk 安装包...")
+    package_fpk_python(FPK_SRC_DIR, dest_fpk)
 
     if os.path.exists(dest_fpk):
         file_size_kb = os.path.getsize(dest_fpk) / 1024
