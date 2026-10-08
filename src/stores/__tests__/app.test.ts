@@ -152,13 +152,18 @@ describe('appStore', () => {
     store.toggleSidebarCollapsed('category');
     expect(store.sidebarCollapsed.category).toBe(false); // Default was true, toggled to false
     expect(safeStorage.getJSON('torrenta_sidebar_collapsed', {} as any).category).toBe(false);
+
+    expect(store.speedChartCollapsed).toBe(false);
+    store.toggleSpeedChartCollapsed();
+    expect(store.speedChartCollapsed).toBe(true);
+    expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
   });
 
   it('should hydrate settings from server via loadServerSettings', async () => {
     const store = useAppStore();
 
     const mockSettings = {
-      appearance: { theme: 'cyberpunk', locale: 'zh' },
+      appearance: { theme: 'cyberpunk', locale: 'zh', speedChartCollapsed: true },
       category_mapping: {
         categoryConfigs: [{ name: 'Movies', paths: ['/media/movies'] }],
       },
@@ -182,6 +187,8 @@ describe('appStore', () => {
 
     expect(store.theme).toBe('cyberpunk');
     expect(store.locale).toBe('zh');
+    expect(store.speedChartCollapsed).toBe(true);
+    expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
     expect(store.categoryConfigs).toEqual([{ name: 'Movies', paths: ['/media/movies'] }]);
     expect(store.sidebarOrder).toEqual(['tag', 'category', 'status']);
     expect(store.sidebarHidden).toEqual(['savepath']);

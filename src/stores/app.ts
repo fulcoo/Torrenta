@@ -43,6 +43,7 @@ export const useAppStore = defineStore('appStore', () => {
       tracker: false,
     })
   );
+  const speedChartCollapsed = ref(safeStorage.getItem('torrenta_speed_chart_collapsed') === 'true');
 
   // Default torrent add options
   const addToTopOfQueue = ref(safeStorage.getItem('torrenta_add_to_top_of_queue') === 'true');
@@ -77,6 +78,7 @@ export const useAppStore = defineStore('appStore', () => {
         appearance: {
           theme: theme.value,
           locale: locale.value,
+          speedChartCollapsed: speedChartCollapsed.value,
         },
         sidebar: {
           order: sidebarOrder.value,
@@ -139,6 +141,10 @@ export const useAppStore = defineStore('appStore', () => {
         if (data.appearance.locale && (data.appearance.locale === 'zh' || data.appearance.locale === 'en')) {
           locale.value = data.appearance.locale;
           safeStorage.setItem('torrenta_locale', data.appearance.locale);
+        }
+        if (typeof data.appearance.speedChartCollapsed === 'boolean') {
+          speedChartCollapsed.value = data.appearance.speedChartCollapsed;
+          safeStorage.setItem('torrenta_speed_chart_collapsed', String(data.appearance.speedChartCollapsed));
         }
       }
 
@@ -354,6 +360,16 @@ export const useAppStore = defineStore('appStore', () => {
     scheduleServerSync();
   }
 
+  function setSpeedChartCollapsed(val: boolean) {
+    speedChartCollapsed.value = val;
+    safeStorage.setItem('torrenta_speed_chart_collapsed', String(val));
+    scheduleServerSync();
+  }
+
+  function toggleSpeedChartCollapsed() {
+    setSpeedChartCollapsed(!speedChartCollapsed.value);
+  }
+
   function setSimulationMode(enabled: boolean) {
     simulationMode.value = enabled;
     safeStorage.setItem('torrenta_simulation_mode', String(enabled));
@@ -474,10 +490,13 @@ export const useAppStore = defineStore('appStore', () => {
     sidebarOrder,
     sidebarHidden,
     sidebarCollapsed,
+    speedChartCollapsed,
     setSidebarOrder,
     setSidebarHidden,
     setSidebarCollapsed,
     toggleSidebarCollapsed,
+    setSpeedChartCollapsed,
+    toggleSpeedChartCollapsed,
     loadServerSettings,
     persistSettingsToServer,
     scheduleServerSync,

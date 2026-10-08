@@ -19,7 +19,7 @@
 
 
     <!-- Speed telemetry wavy area graph -->
-    <div class="w-full h-[150px] shrink-0">
+    <div class="w-full shrink-0 transition-all duration-300">
       <SpeedChart />
     </div>
 

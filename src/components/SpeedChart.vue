@@ -1,14 +1,20 @@
 <template>
-  <div class="bg-base-100 rounded-2xl p-4 shadow-sm flex flex-col w-full h-full border border-base-content/10">
+  <div 
+    class="bg-base-100 rounded-2xl shadow-sm flex flex-col w-full border border-base-content/10 transition-all duration-300"
+    :class="isCollapsed ? 'p-3' : 'p-4'"
+  >
     <!-- Telemetry Speeds Header -->
-    <div class="flex items-center justify-between mb-2">
+    <div 
+      class="flex items-center justify-between select-none cursor-pointer group"
+      @click="toggleCollapse"
+    >
       <div class="flex items-center gap-4">
         <!-- Download -->
         <div class="flex items-center gap-2">
           <div class="h-2 w-2 rounded-full bg-primary glow-primary"></div>
           <div>
             <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalDl') }}</div>
-            <div class="text-sm font-extrabold font-mono text-primary">
+            <div class="text-sm font-extrabold font-mono text-primary leading-tight">
               {{ formatSpeed(torrentStore.globalState?.globalDownloadSpeed || 0) }}
             </div>
           </div>
@@ -19,27 +25,47 @@
           <div class="h-2 w-2 rounded-full bg-secondary glow-secondary"></div>
           <div>
             <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalUl') }}</div>
-            <div class="text-sm font-extrabold font-mono text-secondary">
+            <div class="text-sm font-extrabold font-mono text-secondary leading-tight">
               {{ formatSpeed(torrentStore.globalState?.globalUploadSpeed || 0) }}
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Max Scale Indicator -->
-      <div class="text-[10px] font-mono opacity-50 text-right">
-        {{ t('dashboard.speedChart.maxScale', { speed: formatSpeed(maxSpeed) }) }}
+      <!-- Max Scale Indicator & Toggle Chevron -->
+      <div class="flex items-center gap-3">
+        <div 
+          v-show="!isCollapsed"
+          class="text-[10px] font-mono opacity-50 text-right hidden sm:block transition-opacity duration-200"
+        >
+          {{ t('dashboard.speedChart.maxScale', { speed: formatSpeed(maxSpeed) }) }}
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-ghost btn-xs btn-circle opacity-60 group-hover:opacity-100 hover:bg-base-content/10 transition-all"
+          @click.stop="toggleCollapse"
+        >
+          <ChevronDownIcon 
+            class="h-4 w-4 transition-transform duration-300" 
+            :class="{ '-rotate-90': isCollapsed }" 
+          />
+        </button>
       </div>
     </div>
 
     <!-- Wavy Chart SVG Frame -->
-    <div class="flex-1 w-full relative min-h-[90px] mt-1" ref="container">
-      <svg
-        v-if="pointsCount > 0"
-        viewBox="0 0 400 100"
-        preserveAspectRatio="none"
-        class="w-full h-full overflow-visible"
-      >
+    <div 
+      class="transition-all duration-300 ease-in-out overflow-hidden"
+      :class="isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[140px] opacity-100 mt-1'"
+    >
+      <div class="w-full h-[90px] relative" ref="container">
+        <svg
+          v-if="pointsCount > 0"
+          viewBox="0 0 400 100"
+          preserveAspectRatio="none"
+          class="w-full h-full overflow-visible"
+        >
         <!-- Definitions for Gradients -->
         <defs>
           <linearGradient id="dl-gradient" x1="0" y1="0" x2="0" y2="1">
@@ -93,18 +119,28 @@
           stroke-linejoin="round"
         />
       </svg>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { ChevronDownIcon } from 'lucide-vue-next';
 import { useTorrentStore } from '@/stores/torrent';
+import { useAppStore } from '@/stores/app';
 import { useI18n } from '@/i18n/useI18n';
 
+const appStore = useAppStore();
 const torrentStore = useTorrentStore();
 const { t } = useI18n();
 const pointsCount = 30;
+
+const isCollapsed = computed(() => appStore.speedChartCollapsed);
+
+function toggleCollapse() {
+  appStore.toggleSpeedChartCollapsed();
+}
 
 // Track history array
 const dlHistory = ref<number[]>(new Array(pointsCount).fill(0));
