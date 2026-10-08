@@ -1,6 +1,5 @@
 import os
 import sys
-from PIL import Image
 
 if sys.platform == "win32":
     try:
@@ -14,6 +13,21 @@ SRC_ICON = os.path.join(ROOT_DIR, "public", "logo.png")
 OUTPUT_DIR = os.path.join(ROOT_DIR, "public")
 
 def main():
+    dest_64 = os.path.join(OUTPUT_DIR, "icon-64.png")
+    dest_256 = os.path.join(OUTPUT_DIR, "icon-256.png")
+
+    if (os.path.exists(dest_64) and os.path.getsize(dest_64) > 0 and
+            os.path.exists(dest_256) and os.path.getsize(dest_256) > 0):
+        print(f"✅ 应用图标已就绪: {dest_64}, {dest_256}")
+        return
+
+    try:
+        from PIL import Image
+    except ImportError:
+        print("⚠️ 未检测到 Pillow 模块 (PIL)，且图标缺失。正在尝试安装 Pillow...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "Pillow"], check=True)
+        from PIL import Image
+
     if not os.path.exists(SRC_ICON):
         # 尝试调用 create_torrenta_logo 自动生成高清源图
         import subprocess
@@ -38,3 +52,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
