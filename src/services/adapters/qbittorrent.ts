@@ -341,6 +341,23 @@ export class QBittorrentAdapter implements DownloaderAdapter {
     }
   }
 
+  async setTorrentsCategory(ids: string[], category: string): Promise<boolean> {
+    if (ids.length === 0) return true;
+    try {
+      const hashes = ids.join('|');
+      const params = new URLSearchParams();
+      params.append('hashes', hashes);
+      params.append('category', category);
+      const res = await api.post('/torrents/setCategory', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      return res.status === 200;
+    } catch (err) {
+      console.error('Failed to set category for torrents:', err);
+      return false;
+    }
+  }
+
   async renameTorrent(id: string, name: string): Promise<boolean> {
     try {
       const params = new URLSearchParams();
@@ -530,7 +547,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       return response.data || {};
     } catch (err) {
       console.error('Failed to get qBittorrent categories:', err);
-      throw err;
+      return {};
     }
   }
 

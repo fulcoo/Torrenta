@@ -37,6 +37,7 @@ export interface DownloaderAdapter {
   getTorrentProperties(id: string): Promise<TorrentProperties | null>;
   forceStartTorrents(ids: string[]): Promise<boolean>;
   setTorrentsLocation(ids: string[], location: string): Promise<boolean>;
+  setTorrentsCategory(ids: string[], category: string): Promise<boolean>;
   renameTorrent(id: string, name: string): Promise<boolean>;
   addTorrentTags(ids: string[], tags: string[]): Promise<boolean>;
   removeTorrentTags(ids: string[], tags: string[]): Promise<boolean>;

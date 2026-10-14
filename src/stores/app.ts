@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { safeStorage } from '@/utils/storage';
+import { useAuthStore } from '@/stores/auth';
 
 export interface CategoryConfig {
   name: string;
@@ -107,6 +108,7 @@ export const useAppStore = defineStore('appStore', () => {
           username: username.value,
           driverType: driverType.value,
         },
+        security: useAuthStore().getSecurityData(),
       };
 
       await fetch('/api/user-settings', {
@@ -127,6 +129,11 @@ export const useAppStore = defineStore('appStore', () => {
       const data = await res.json();
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
         return;
+      }
+
+      // Security Settings
+      if (data.security) {
+        useAuthStore().hydrateSecurityData(data.security);
       }
 
       // 1. Appearance

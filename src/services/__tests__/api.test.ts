@@ -74,4 +74,13 @@ describe('api service', () => {
       expect(updatedConfig.baseURL).toBe('/api/v2');
     });
   });
+
+  describe('silent re-authentication', () => {
+    it('should return false if no credentials stored', async () => {
+      const { silentReauth } = await import('../api');
+      const result = await silentReauth();
+      expect(result).toBe(false);
+    });
+  });
 });
+

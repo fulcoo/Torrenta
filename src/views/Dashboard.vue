@@ -287,7 +287,7 @@
           <AlertTriangleIcon class="h-5.5 w-5.5" /> {{ t('dashboard.removeTitle') }}
         </h3>
         <p class="py-4 text-xs font-semibold leading-relaxed opacity-80">
-          <span v-if="deleteTargetName" v-html="t('torrent.confirmDeleteSingle', { name: `<strong>${deleteTargetName}</strong>` })"></span>
+          <span v-if="deleteTargetName">{{ t('torrent.confirmDeleteSingle', { name: `"${deleteTargetName}"` }) }}</span>
           <span v-else>{{ t('dashboard.removeConfirm', { count: idsToDelete.length }) }}</span>
         </p>
         
@@ -950,6 +950,63 @@
         <span>{{ t('torrent.rename') }}</span>
       </button>
 
+      <!-- Option: Category (with Hover Submenu) -->
+      <div class="relative group/catmenu">
+        <div 
+          @click="handleContextAction('change-category')"
+          class="flex items-center justify-between gap-2.5 px-3 py-2 rounded-xl hover:bg-base-content/10 text-base-content cursor-pointer"
+        >
+          <div class="flex items-center gap-2.5">
+            <FolderIcon class="h-4 w-4 opacity-70" />
+            <span>{{ t('torrent.setCategory') }}</span>
+          </div>
+          <ChevronRightIcon class="h-3.5 w-3.5 opacity-60" />
+        </div>
+
+        <!-- Submenu panel (Visible on hover) -->
+        <div 
+          class="absolute top-0 w-52 bg-base-200 border border-base-content/15 rounded-xl p-1.5 shadow-2xl flex flex-col gap-0.5 opacity-0 invisible group-hover/catmenu:opacity-100 group-hover/catmenu:visible transition-all duration-200 z-[110]"
+          :class="contextMenu.submenuLeft ? 'right-full mr-1.5' : 'left-full ml-1.5'"
+        >
+          <!-- Submenu header actions: Add Category, Reset Category -->
+          <div class="flex items-center justify-between border-b border-base-content/10 pb-1.5 mb-1.5 px-1">
+            <button 
+              @click.stop="handleContextAction('add-category')" 
+              class="btn btn-ghost btn-xs text-primary font-bold hover:bg-primary/10 rounded-lg px-2 h-6"
+            >
+              + {{ t('torrent.addCategory') }}
+            </button>
+            <button 
+              @click.stop="applyTorrentCategory('')" 
+              class="btn btn-ghost btn-xs text-base-content/70 font-semibold hover:bg-base-content/10 rounded-lg px-2 h-6"
+              :class="{ 'text-primary font-bold': !contextMenuTorrent?.category }"
+            >
+              {{ t('torrent.noCategory') }}
+            </button>
+          </div>
+
+          <!-- Category list with active indicator -->
+          <div class="max-h-48 overflow-y-auto flex flex-col gap-0.5 pr-0.5">
+            <button 
+              v-for="cat in allCategories" 
+              :key="cat" 
+              @click.stop="applyTorrentCategory(cat)"
+              class="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-base-content/10 cursor-pointer text-[11px] text-left transition-colors"
+              :class="contextMenuTorrent?.category === cat ? 'bg-primary/15 text-primary font-bold' : 'text-base-content'"
+            >
+              <div class="flex items-center gap-2 truncate">
+                <FolderIcon class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                <span class="truncate" :title="cat">{{ cat }}</span>
+              </div>
+              <CheckIcon v-if="contextMenuTorrent?.category === cat" class="h-3.5 w-3.5 text-primary shrink-0" />
+            </button>
+            <div v-if="allCategories.length === 0" class="text-[10px] text-base-content/40 italic py-2 text-center select-none">
+              {{ t('settings.noCategories') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Option: Change Location -->
       <button 
         @click="handleContextAction('change-path')" 
@@ -984,7 +1041,8 @@
 
         <!-- Submenu panel (Visible on hover) -->
         <div 
-          class="absolute left-full top-0 ml-1.5 w-52 bg-base-200 border border-base-content/15 rounded-xl p-1.5 shadow-2xl flex flex-col gap-0.5 opacity-0 invisible group-hover/submenu:opacity-100 group-hover/submenu:visible transition-all duration-200 z-[110]"
+          class="absolute top-0 w-52 bg-base-200 border border-base-content/15 rounded-xl p-1.5 shadow-2xl flex flex-col gap-0.5 opacity-0 invisible group-hover/submenu:opacity-100 group-hover/submenu:visible transition-all duration-200 z-[110]"
+          :class="contextMenu.submenuLeft ? 'right-full mr-1.5' : 'left-full ml-1.5'"
         >
           <!-- Submenu header actions: Add, Remove All -->
           <div class="flex items-center justify-between border-b border-base-content/10 pb-1.5 mb-1.5 px-1">
@@ -1091,6 +1149,59 @@
       </div>
     </dialog>
 
+    <!-- Custom Glassmorphic Change Category Dialog Modal -->
+    <dialog :open="showChangeCategoryModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showChangeCategoryModal }">
+      <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
+        <h3 class="font-black text-lg text-primary flex items-center gap-2">
+          <FolderIcon class="h-5.5 w-5.5 text-primary" /> {{ t('torrent.changeCategory') }}
+        </h3>
+        <div class="form-control w-full mt-4">
+          <label class="label font-bold text-xs uppercase opacity-75">{{ t('torrent.confirmCategory') }}</label>
+          <input
+            v-model="changeCategoryForm.category"
+            list="dashboard-category-suggestions"
+            type="text"
+            class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-10 min-h-[40px] px-3 border border-base-content/10"
+            :placeholder="t('torrent.categoryPlaceholder')"
+          />
+          <datalist id="dashboard-category-suggestions">
+            <option v-for="cat in allCategories" :key="cat" :value="cat" />
+          </datalist>
+
+          <!-- Quick Category Badges -->
+          <div class="flex flex-wrap gap-1.5 mt-3 max-h-24 overflow-y-auto">
+            <button
+              type="button"
+              @click="changeCategoryForm.category = ''"
+              class="badge badge-sm py-2 px-2.5 rounded-lg border border-base-content/15 cursor-pointer transition-colors"
+              :class="changeCategoryForm.category === '' ? 'badge-primary font-bold' : 'badge-ghost text-base-content/70 hover:bg-base-content/10'"
+            >
+              {{ t('torrent.noCategory') }}
+            </button>
+            <button
+              v-for="cat in allCategories"
+              :key="cat"
+              type="button"
+              @click="changeCategoryForm.category = cat"
+              class="badge badge-sm py-2 px-2.5 rounded-lg border border-base-content/15 cursor-pointer transition-colors"
+              :class="changeCategoryForm.category === cat ? 'badge-primary font-bold' : 'badge-ghost text-base-content/70 hover:bg-base-content/10'"
+            >
+              {{ cat }}
+            </button>
+          </div>
+        </div>
+        <!-- Actions -->
+        <div class="modal-action gap-2 justify-end mt-6">
+          <button @click="showChangeCategoryModal = false" class="btn btn-ghost btn-sm rounded-xl">
+            {{ t('common.cancel') }}
+          </button>
+          <button @click="confirmChangeCategory" class="btn btn-primary btn-sm rounded-xl px-4 shadow-lg shadow-primary/25 font-bold">
+            {{ t('torrent.confirm') }}
+          </button>
+        </div>
+      </div>
+    </dialog>
+
     <!-- Custom Glassmorphic Add Tag Dialog Modal -->
     <dialog :open="showAddTagModal" class="modal bg-black/60 z-50" :class="{ 'modal-open': showAddTagModal }">
       <div class="modal-box bg-base-100 border border-base-content/10 max-w-sm rounded-2xl p-6 shadow-2xl">
@@ -1165,6 +1276,8 @@ import {
   ZapIcon,
   Edit2Icon,
   FolderOpenIcon,
+  FolderIcon,
+  CheckIcon,
   TagIcon,
   ChevronRightIcon,
   GlobeIcon,
@@ -1599,9 +1712,7 @@ const deleteFilesFromDisk = ref(false);
 
 // Auto-boot loop on mount
 onMounted(() => {
-  torrentStore.bootClient().then(() => {
-    torrentStore.triggerSyncLoop();
-  }).catch((e) => {
+  torrentStore.bootClient().catch((e) => {
     console.warn('Dashboard boot sync connection not ready:', e);
   });
 });
@@ -1670,11 +1781,9 @@ const filteredTorrents = computed(() => {
         : valB.localeCompare(valA);
     }
 
-    if (typeof valA === 'number' && typeof valB === 'number') {
-      return sortOrder.value === 'asc' ? valA - valB : valB - valA;
-    }
-
-    return 0;
+    const numA = typeof valA === 'number' ? valA : 0;
+    const numB = typeof valB === 'number' ? valB : 0;
+    return sortOrder.value === 'asc' ? numA - numB : numB - numA;
   });
 
   return list;
@@ -1882,6 +1991,7 @@ const contextMenu = reactive({
   show: false,
   x: 0,
   y: 0,
+  submenuLeft: false,
 });
 const contextMenuTorrent = ref<UnifiedTorrent | null>(null);
 
@@ -1891,7 +2001,7 @@ function openContextMenu(e: MouseEvent, torrent: UnifiedTorrent) {
   
   // Viewport safety boundary check
   const menuWidth = 224;
-  const menuHeight = 260;
+  const menuHeight = 310;
   if (x + menuWidth > window.innerWidth) {
     x = window.innerWidth - menuWidth - 8;
   }
@@ -1902,6 +2012,7 @@ function openContextMenu(e: MouseEvent, torrent: UnifiedTorrent) {
   contextMenu.show = true;
   contextMenu.x = x;
   contextMenu.y = y;
+  contextMenu.submenuLeft = (x + menuWidth + 215 > window.innerWidth);
   contextMenuTorrent.value = torrent;
 
   const close = () => {
@@ -1923,6 +2034,12 @@ const renameForm = reactive({
   name: '',
 });
 
+const showChangeCategoryModal = ref(false);
+const changeCategoryForm = reactive({
+  ids: [] as string[],
+  category: '',
+});
+
 const showChangePathModal = ref(false);
 const changePathForm = reactive({
   ids: [] as string[],
@@ -1938,6 +2055,7 @@ const addTagForm = reactive({
 const showEditTrackerModal = ref(false);
 const editTrackerTargetIds = ref<string[]>([]);
 
+const allCategories = computed(() => torrentStore.categories);
 const allTags = computed(() => torrentStore.tags);
 
 function isTagSelected(tag: string): boolean {
@@ -1967,7 +2085,10 @@ async function confirmRename() {
 }
 
 function openChangePathModal(torrent: UnifiedTorrent) {
-  changePathForm.ids = [torrent.id];
+  const targetIds = selectedIds.value.includes(torrent.id)
+    ? [...selectedIds.value]
+    : [torrent.id];
+  changePathForm.ids = targetIds;
   changePathForm.path = torrent.savepath || '';
   showChangePathModal.value = true;
 }
@@ -1975,6 +2096,36 @@ function openChangePathModal(torrent: UnifiedTorrent) {
 async function confirmChangePath() {
   await torrentStore.setTorrentsLocation(changePathForm.ids, changePathForm.path);
   showChangePathModal.value = false;
+}
+
+async function applyTorrentCategory(cat: string) {
+  if (!contextMenuTorrent.value) return;
+  const targetIds = selectedIds.value.includes(contextMenuTorrent.value.id)
+    ? [...selectedIds.value]
+    : [contextMenuTorrent.value.id];
+  await torrentStore.setTorrentsCategory(targetIds, cat);
+  contextMenu.show = false;
+}
+
+function openChangeCategoryModal(torrent?: UnifiedTorrent | null) {
+  const target = torrent || contextMenuTorrent.value;
+  if (!target) return;
+  const targetIds = selectedIds.value.includes(target.id)
+    ? [...selectedIds.value]
+    : [target.id];
+  changeCategoryForm.ids = targetIds;
+  changeCategoryForm.category = target.category || '';
+  contextMenu.show = false;
+  showChangeCategoryModal.value = true;
+}
+
+async function confirmChangeCategory() {
+  const cat = changeCategoryForm.category.trim();
+  if (cat && !allCategories.value.includes(cat)) {
+    await torrentStore.createCategory(cat);
+  }
+  await torrentStore.setTorrentsCategory(changeCategoryForm.ids, cat);
+  showChangeCategoryModal.value = false;
 }
 
 function openAddTagModal() {
@@ -2058,6 +2209,10 @@ async function handleContextAction(action: string) {
       break;
     case 'rename':
       openRenameModal(torrent);
+      break;
+    case 'change-category':
+    case 'add-category':
+      openChangeCategoryModal(torrent);
       break;
     case 'change-path':
       openChangePathModal(torrent);

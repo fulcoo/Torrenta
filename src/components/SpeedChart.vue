@@ -151,9 +151,11 @@ watch(
   () => torrentStore.globalState,
   (newState) => {
     if (newState) {
-      dlHistory.value.push(newState.globalDownloadSpeed);
+      const dl = Number.isFinite(newState.globalDownloadSpeed) ? Math.max(0, newState.globalDownloadSpeed) : 0;
+      const ul = Number.isFinite(newState.globalUploadSpeed) ? Math.max(0, newState.globalUploadSpeed) : 0;
+      dlHistory.value.push(dl);
       dlHistory.value.shift();
-      ulHistory.value.push(newState.globalUploadSpeed);
+      ulHistory.value.push(ul);
       ulHistory.value.shift();
     }
   },

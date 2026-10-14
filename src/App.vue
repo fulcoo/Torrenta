@@ -2,9 +2,11 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useTorrentStore } from '@/stores/torrent';
+import { useAuthStore } from '@/stores/auth';
 import { useI18n } from '@/i18n/useI18n';
 import Dashboard from '@/views/Dashboard.vue';
 import Settings from '@/views/Settings.vue';
+import LoginModal from '@/components/LoginModal.vue';
 import { 
   ActivityIcon, 
   SettingsIcon, 
@@ -12,11 +14,14 @@ import {
   LanguagesIcon,
   SearchIcon,
   XIcon,
-  MenuIcon
+  MenuIcon,
+  ShieldCheckIcon,
+  LogOutIcon
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
 const torrentStore = useTorrentStore();
+const authStore = useAuthStore();
 const { t } = useI18n();
 
 // Simple hash router
@@ -39,6 +44,11 @@ onMounted(() => {
   // Apply default configured theme to html tag
   document.documentElement.setAttribute('data-theme', appStore.theme);
   document.addEventListener('click', handleDocumentClick);
+
+  // Attempt initial client boot to check connection
+  if (!torrentStore.hasAttemptedBoot) {
+    torrentStore.bootClient().catch(() => {});
+  }
 });
 
 onUnmounted(() => {
@@ -167,12 +177,29 @@ const isSettings = computed(() => {
             <SettingsIcon class="h-4 w-4" />
             <span class="hidden sm:inline">{{ t('nav.settings') }}</span>
           </a>
+
+          <!-- User Auth Logout / Lock Button (when auth enabled and logged in) -->
+          <button
+            v-if="authStore.authEnabled && authStore.isAuthenticated"
+            type="button"
+            @click="authStore.logout()"
+            class="btn btn-ghost btn-sm rounded-xl gap-1.5 text-xs font-bold opacity-75 hover:opacity-100 hover:text-error hover:bg-error/10 ml-0.5 transition-all"
+            :title="`${t('nav.authProtected')} (${authStore.authUsername}) - ${t('nav.logout')}`"
+          >
+            <ShieldCheckIcon class="h-4 w-4 text-success" />
+            <span class="hidden md:inline">{{ authStore.authUsername }}</span>
+            <LogOutIcon class="h-3.5 w-3.5 opacity-60" />
+          </button>
         </div>
       </div>
     </header>
 
-    <!-- Main Views Area -->
-    <main class="flex-1 w-full relative">
+    <!-- Main Views Area (Blurred & inert when locked) -->
+    <main
+      class="flex-1 w-full relative transition-all duration-300"
+      :class="{ 'filter blur-md pointer-events-none select-none': authStore.isLocked }"
+      :inert="authStore.isLocked ? true : undefined"
+    >
       <transition name="fade" mode="out-in">
         <component :is="currentView" />
       </transition>
@@ -185,6 +212,9 @@ const isSettings = computed(() => {
         <span>{{ t('nav.footerDesc') }}</span>
       </div>
     </footer>
+
+    <!-- Global Login Modal / Lock Screen -->
+    <LoginModal />
   </div>
 </template>
 

@@ -4,6 +4,7 @@ import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/to
 import type { AddTorrentOptions } from '@/services/adapters/interface';
 import { DownloaderFactory } from '@/services/adapters/factory';
 import { useAppStore } from './app';
+import { useAuthStore } from './auth';
 import { safeStorage } from '@/utils/storage';
 
 export const useTorrentStore = defineStore('torrentStore', () => {
@@ -13,6 +14,8 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   const isPollingActive = ref(false);
   const isConnected = ref(false);
   const connectionError = ref<string | null>(null);
+  const hasAttemptedBoot = ref(false);
+  const isBooting = ref(false);
 
   const searchQuery = ref('');
 
@@ -29,8 +32,11 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   const simulatedTags = ref<string[]>(['Important', 'Entertainment', 'Work']);
 
   let driver: ReturnType<typeof DownloaderFactory.create> | null = null;
+  let bootPromise: Promise<boolean> | null = null;
   let pollTimeoutId: any = null;
   let isFetching = false;
+  let consecutiveFailures = 0;
+  const MAX_FAILURES_BEFORE_DISCONNECT = 3;
   const pendingStates = new Map<string, { status: UnifiedTorrent['status']; timestamp: number }>();
 
   const simulatedTorrents = ref<UnifiedTorrent[]>([]);
@@ -319,54 +325,112 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     );
   }
 
-  async function bootClient() {
-    connectionError.value = null;
-
-    if (appStore.simulationMode) {
-      if (simulatedTorrents.value.length === 0) {
-        resetSimulatedData();
-      }
-      isConnected.value = true;
-      isPollingActive.value = true;
-      triggerSyncLoop();
-      return true;
+  async function bootClient(): Promise<boolean> {
+    if (bootPromise) {
+      return bootPromise;
     }
 
-    try {
-      // Check for autologin credentials served by the Nginx proxy
-      try {
-        const res = await window.fetch('/api/torrenta-autologin');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.username && data.password) {
-            // Update config if username or password has changed
-            if (appStore.username !== data.username || appStore.password !== data.password) {
-              appStore.saveConfig('', data.username, data.password, 'qbittorrent');
-            }
-          }
-        }
-      } catch (e) {
-        // Safe to ignore, endpoint might not exist (e.g. in Alternative WebUI mode)
-      }
+    bootPromise = (async () => {
+      isBooting.value = true;
+      connectionError.value = null;
 
-      driver = DownloaderFactory.create(appStore.driverType);
-      const success = await driver.connect(
-        appStore.url,
-        appStore.username,
-        appStore.password
-      );
-      if (success) {
+      if (appStore.simulationMode) {
+        if (simulatedTorrents.value.length === 0) {
+          resetSimulatedData();
+        }
         isConnected.value = true;
         isPollingActive.value = true;
+        hasAttemptedBoot.value = true;
+        isBooting.value = false;
         triggerSyncLoop();
         return true;
       }
-      return false;
+
+      try {
+        // Check for autologin credentials served by the Nginx proxy
+        try {
+          const res = await window.fetch('/api/torrenta-autologin');
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.username && data.password) {
+              // Update config if username or password has changed
+              if (appStore.username !== data.username || appStore.password !== data.password) {
+                appStore.saveConfig('', data.username, data.password, 'qbittorrent');
+              }
+            }
+          }
+        } catch (e) {
+          // Safe to ignore, endpoint might not exist (e.g. in Alternative WebUI mode)
+        }
+
+        driver = DownloaderFactory.create(appStore.driverType);
+        const success = await driver.connect(
+          appStore.url,
+          appStore.username,
+          appStore.password
+        );
+        if (success) {
+          isConnected.value = true;
+          isPollingActive.value = true;
+          hasAttemptedBoot.value = true;
+          isBooting.value = false;
+          triggerSyncLoop();
+          return true;
+        }
+        isConnected.value = false;
+        hasAttemptedBoot.value = true;
+        isBooting.value = false;
+        return false;
+      } catch (err: any) {
+        isConnected.value = false;
+        isPollingActive.value = false;
+        hasAttemptedBoot.value = true;
+        isBooting.value = false;
+        connectionError.value = err.message || 'Connection failed';
+        stopSyncLoop();
+        throw err;
+      } finally {
+        bootPromise = null;
+      }
+    })();
+
+    return bootPromise;
+  }
+
+  async function connectWithCredentials(
+    targetUrl: string,
+    targetUser: string,
+    targetPass: string
+  ): Promise<boolean> {
+    isBooting.value = true;
+    connectionError.value = null;
+
+    try {
+      const tempDriver = DownloaderFactory.create(appStore.driverType);
+      const success = await tempDriver.connect(targetUrl, targetUser, targetPass);
+      if (success) {
+        // Save to appStore & localStorage
+        appStore.saveConfig(targetUrl, targetUser, targetPass, appStore.driverType);
+        driver = tempDriver;
+        isConnected.value = true;
+        isPollingActive.value = true;
+        hasAttemptedBoot.value = true;
+        isBooting.value = false;
+        triggerSyncLoop();
+        return true;
+      } else {
+        isConnected.value = false;
+        hasAttemptedBoot.value = true;
+        isBooting.value = false;
+        connectionError.value = 'Authentication failed';
+        return false;
+      }
     } catch (err: any) {
       isConnected.value = false;
       isPollingActive.value = false;
+      hasAttemptedBoot.value = true;
+      isBooting.value = false;
       connectionError.value = err.message || 'Connection failed';
-      stopSyncLoop();
       throw err;
     }
   }
@@ -458,9 +522,28 @@ export const useTorrentStore = defineStore('torrentStore', () => {
             allTorrentsCount: simulatedTorrents.value.length,
           };
           isConnected.value = true;
+          consecutiveFailures = 0;
         } else {
           if (!driver) {
             driver = DownloaderFactory.create(appStore.driverType);
+          }
+
+          // If marked disconnected, attempt proactive reconnect with saved credentials
+          if (!isConnected.value) {
+            try {
+              const reconnected = await driver.connect(
+                appStore.url,
+                appStore.username,
+                appStore.password
+              );
+              if (reconnected) {
+                isConnected.value = true;
+                consecutiveFailures = 0;
+                connectionError.value = null;
+              }
+            } catch {
+              // Still reconnecting, proceed to attempt data fetch or wait for next poll
+            }
           }
 
           // Concurrency Guard: execute getTorrents, getGlobalState, getTags and getCategories concurrently
@@ -484,34 +567,67 @@ export const useTorrentStore = defineStore('torrentStore', () => {
             }
           }
 
-          torrents.value = rawList.map((t) => {
-            const pending = pendingStates.get(t.id);
-            if (pending) {
-              if (now - pending.timestamp < 2500) {
-                // Enforce optimistic state unconditionally for 2.5s to let backend catch up
-                return { ...t, status: pending.status };
-              } else {
-                // Time window expired, let server state take over and cleanup
-                pendingStates.delete(t.id);
+          // Guard against transient empty list responses overriding existing torrents
+          if (!(rawList.length === 0 && torrents.value.length > 0 && (rawStats?.allTorrentsCount || 0) > 0)) {
+            torrents.value = rawList.map((t) => {
+              const pending = pendingStates.get(t.id);
+              if (pending) {
+                if (now - pending.timestamp < 2500) {
+                  // Enforce optimistic state unconditionally for 2.5s to let backend catch up
+                  return { ...t, status: pending.status };
+                } else {
+                  // Time window expired, let server state take over and cleanup
+                  pendingStates.delete(t.id);
+                }
               }
-            }
-            return t;
-          });
+              return t;
+            });
+          }
+
           globalState.value = rawStats;
           systemTags.value = rawTags;
           isConnected.value = true;
+          consecutiveFailures = 0;
+          connectionError.value = null;
+
+          // Touch auth session on successful sync to extend active sliding window
+          try {
+            useAuthStore().touchSession();
+          } catch {
+            // Pinia initialization safeguard
+          }
         }
-      } catch (err) {
-        console.error('Torrenta telemetry dropped sync:', err);
-        // Do not throw to keep loop running, but register connection issue
-        isConnected.value = false;
+      } catch (err: any) {
+        consecutiveFailures++;
+        console.warn(`Torrenta telemetry dropped sync (${consecutiveFailures}/${MAX_FAILURES_BEFORE_DISCONNECT}):`, err);
+        // Only set disconnected after 3 consecutive failures to avoid flapping on transient blips
+        if (consecutiveFailures >= MAX_FAILURES_BEFORE_DISCONNECT) {
+          isConnected.value = false;
+          connectionError.value = err?.message || 'Connection lost';
+        }
       } finally {
         isFetching = false;
-        // Schedule next poll recursively to prevent HTTP queue clogging on slow routes
+        // Schedule next poll recursively with adaptive delay (8s in background, 2.5s when active)
         if (isPollingActive.value) {
-          pollTimeoutId = setTimeout(poll, 1500);
+          const isDocHidden = typeof document !== 'undefined' && document.hidden;
+          const pollDelay = isDocHidden ? 8000 : 2500;
+          pollTimeoutId = setTimeout(poll, pollDelay);
         }
       }
+    }
+
+    // Bind visibilitychange listener once to resume polling immediately when tab becomes visible
+    if (typeof document !== 'undefined' && !(window as any).__torrenta_visibility_bound) {
+      (window as any).__torrenta_visibility_bound = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && isPollingActive.value && !isFetching) {
+          if (pollTimeoutId) {
+            clearTimeout(pollTimeoutId);
+            pollTimeoutId = null;
+          }
+          poll();
+        }
+      });
     }
 
     poll();
@@ -614,8 +730,11 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   }
 
   async function deleteTorrents(ids: string[], deleteData: boolean) {
+    if (ids.length === 0) return true;
+    const matchAll = ids.includes('all');
+
     if (appStore.simulationMode) {
-      simulatedTorrents.value = simulatedTorrents.value.filter((t) => !ids.includes(t.id));
+      simulatedTorrents.value = matchAll ? [] : simulatedTorrents.value.filter((t) => !ids.includes(t.id));
       torrents.value = [...simulatedTorrents.value];
       if (globalState.value) {
         globalState.value.allTorrentsCount = simulatedTorrents.value.length;
@@ -627,7 +746,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     const success = await driver.deleteTorrents(ids, deleteData);
     if (success) {
       // Filter out deleted elements
-      torrents.value = torrents.value.filter((t) => !ids.includes(t.id));
+      torrents.value = matchAll ? [] : torrents.value.filter((t) => !ids.includes(t.id));
     }
     return success;
   }
@@ -961,6 +1080,36 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     return success;
   }
 
+  async function setTorrentsCategory(ids: string[], category: string): Promise<boolean> {
+    if (appStore.simulationMode) {
+      const catConfig = appStore.categoryConfigs.find((c) => c.name === category);
+      simulatedTorrents.value = simulatedTorrents.value.map((t) => {
+        if (ids.includes(t.id)) {
+          const updated: UnifiedTorrent = {
+            ...t,
+            category,
+          };
+          if (category && catConfig && catConfig.paths.length > 0) {
+            updated.savepath = catConfig.paths[0];
+          } else if (category && !t.savepath) {
+            updated.savepath = `/downloads/${category.toLowerCase()}`;
+          }
+          return updated;
+        }
+        return t;
+      });
+      torrents.value = [...simulatedTorrents.value];
+      return true;
+    }
+
+    if (!driver) return false;
+    const success = await driver.setTorrentsCategory(ids, category);
+    if (success) {
+      triggerSyncLoop();
+    }
+    return success;
+  }
+
   async function renameTorrent(id: string, name: string): Promise<boolean> {
     if (appStore.simulationMode) {
       simulatedTorrents.value = simulatedTorrents.value.map((t) => {
@@ -1217,9 +1366,24 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         // Join with blank lines representing tier separation
         const formattedUrls = linesByTier.map(tierList => tierList.join('\n')).join('\n\n');
 
-        // 3. Add all trackers at once with their correct tier separators
+        // 3. Add all trackers at once with their correct tier separators with rollback defense
         if (formattedUrls.trim()) {
-          await driver.addTorrentTrackers(hash, formattedUrls);
+          try {
+            const addSuccess = await driver.addTorrentTrackers(hash, formattedUrls);
+            if (!addSuccess) {
+              throw new Error('Failed to add new trackers to qBittorrent');
+            }
+          } catch (addErr) {
+            console.error(`Failed to add new trackers to ${hash}, attempting rollback to restore original trackers:`, addErr);
+            if (allCurrentUrls.length > 0) {
+              try {
+                await driver.addTorrentTrackers(hash, allCurrentUrls.join('\n'));
+              } catch (rollbackErr) {
+                console.error(`Rollback recovery failed for torrent ${hash}:`, rollbackErr);
+              }
+            }
+            throw addErr;
+          }
         }
       }
 
@@ -1237,6 +1401,9 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     isPollingActive,
     isConnected,
     connectionError,
+    hasAttemptedBoot,
+    isBooting,
+    connectWithCredentials,
     searchQuery,
     categories,
     torrentSavePaths,
@@ -1265,6 +1432,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     getTorrentProperties,
     forceStartTorrents,
     setTorrentsLocation,
+    setTorrentsCategory,
     renameTorrent,
     addTorrentTags,
     removeTorrentTags,

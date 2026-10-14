@@ -348,6 +348,18 @@ describe('QBittorrentAdapter', () => {
       const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
       expect(calledParams.get('categories')).toBe('Movies\nMusic');
     });
+
+    it('should set category for torrents successfully', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 200 } as any);
+
+      const success = await adapter.setTorrentsCategory(['hash1', 'hash2'], 'Movies');
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/setCategory', expect.any(URLSearchParams), expect.any(Object));
+
+      const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
+      expect(calledParams.get('hashes')).toBe('hash1|hash2');
+      expect(calledParams.get('category')).toBe('Movies');
+    });
   });
 });
 

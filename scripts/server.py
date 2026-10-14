@@ -166,6 +166,8 @@ def get_user_settings_file(username=""):
     return os.path.join(DATA_DIR, "user_settings.json")
 
 class SafeTorrentaHandler(SimpleHTTPRequestHandler):
+    timeout = 30  # Prevent zombie worker threads on abandoned connections
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_ROOT, **kwargs)
 
@@ -309,6 +311,12 @@ class SafeTorrentaHandler(SimpleHTTPRequestHandler):
             target_file = get_user_settings_file(username)
             try:
                 content_len = int(self.headers.get('Content-Length', 0))
+                if content_len > 2 * 1024 * 1024:
+                    self.send_response(413)
+                    self.send_header('Content-Type', 'application/json; charset=utf-8')
+                    self.end_headers()
+                    self.wfile.write(b'{"error": "Payload Too Large"}')
+                    return
                 body = self.rfile.read(content_len)
                 # 校验有效 JSON
                 json.loads(body.decode('utf-8'))
@@ -393,6 +401,7 @@ class SafeTorrentaHandler(SimpleHTTPRequestHandler):
         req.add_header('Host', QBITTORRENT_HOST)
         req.add_header('Origin', f"http://{QBITTORRENT_HOST}")
         req.add_header('Referer', f"http://{QBITTORRENT_HOST}/")
+        req.add_header('Connection', 'close')
 
         is_https = (self.headers.get('X-Forwarded-Proto', '').lower() == 'https')
 
@@ -417,27 +426,44 @@ class SafeTorrentaHandler(SimpleHTTPRequestHandler):
                     chunk = resp.read(65536)
                     if not chunk:
                         break
-                    self.wfile.write(chunk)
+                    try:
+                        self.wfile.write(chunk)
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
         except urllib.error.HTTPError as e:
-            self.send_response(e.code)
-            for hk, hv in e.headers.items():
-                hk_low = hk.lower()
-                if hk_low in ('transfer-encoding', 'connection'):
-                    continue
-                if hk_low == 'set-cookie' and is_https:
-                    import re
-                    if 'samesite=' in hv.lower():
-                        hv = re.sub(r'samesite=\w+', 'SameSite=None; Secure', hv, flags=re.IGNORECASE)
-                    elif 'secure' not in hv.lower():
-                        hv = f"{hv}; SameSite=None; Secure"
-                self.send_header(hk, hv)
-            self.end_headers()
-            self.wfile.write(e.read())
+            try:
+                with e:
+                    body = e.read()
+                    self.send_response(e.code)
+                    for hk, hv in e.headers.items():
+                        hk_low = hk.lower()
+                        if hk_low in ('transfer-encoding', 'connection'):
+                            continue
+                        if hk_low == 'set-cookie' and is_https:
+                            import re
+                            if 'samesite=' in hv.lower():
+                                hv = re.sub(r'samesite=\w+', 'SameSite=None; Secure', hv, flags=re.IGNORECASE)
+                            elif 'secure' not in hv.lower():
+                                hv = f"{hv}; SameSite=None; Secure"
+                        self.send_header(hk, hv)
+                    self.end_headers()
+                    self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except Exception:
+                pass
+        except (BrokenPipeError, ConnectionResetError):
+            pass
         except Exception as ex:
-            self.send_response(502)
-            self.send_header('Content-Type', 'text/plain; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(f"Torrenta 代理连接 qBittorrent ({target_url}) 失败: {str(ex)}".encode('utf-8'))
+            try:
+                self.send_response(502)
+                self.send_header('Content-Type', 'text/plain; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(f"Torrenta 代理连接 qBittorrent ({target_url}) 失败: {str(ex)}".encode('utf-8'))
+            except (BrokenPipeError, ConnectionResetError):
+                pass
+            except Exception:
+                pass
 
     def translate_path(self, path):
         try:

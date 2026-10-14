@@ -103,4 +103,17 @@ describe('torrentStore', () => {
       { path: '/downloads/tv', count: 1 },
     ]);
   });
+
+  it('should set torrents category in simulation mode', async () => {
+    const appStore = useAppStore();
+    appStore.setSimulationMode(true);
+    appStore.setSimulatedCount(3);
+    const store = useTorrentStore();
+    await store.bootClient();
+
+    const targetId = store.torrents[0].id;
+    const res = await store.setTorrentsCategory([targetId], 'NewCat');
+    expect(res).toBe(true);
+    expect(store.torrents.find((t) => t.id === targetId)?.category).toBe('NewCat');
+  });
 });

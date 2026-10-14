@@ -56,7 +56,10 @@ export function decodeBencode(buffer: Uint8Array): any {
     return strBytes;
   }
 
-  function parseVal(): any {
+  function parseVal(depth: number = 0): any {
+    if (depth > 200) {
+      throw new Error('Exceeded maximum bencode nesting depth (potential malformed file)');
+    }
     if (offset >= buffer.length) {
       throw new Error('Unexpected EOF');
     }
@@ -71,7 +74,7 @@ export function decodeBencode(buffer: Uint8Array): any {
       offset++; // skip 'l'
       const list: any[] = [];
       while (offset < buffer.length && buffer[offset] !== 0x65) { // until 'e'
-        list.push(parseVal());
+        list.push(parseVal(depth + 1));
       }
       if (offset >= buffer.length) {
         throw new Error('Unterminated list');
@@ -91,7 +94,7 @@ export function decodeBencode(buffer: Uint8Array): any {
           // Speed optimization: do not decode pieces block as UTF-8 string
           val = parseStringBytes();
         } else {
-          val = parseVal();
+          val = parseVal(depth + 1);
         }
         const valEnd = offset;
         
@@ -113,7 +116,28 @@ export function decodeBencode(buffer: Uint8Array): any {
     }
   }
 
-  return parseVal();
+  return parseVal(0);
+}
+
+function base32ToHex(base32: string): string {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0;
+  let value = 0;
+  let hex = '';
+
+  for (const char of base32.toUpperCase()) {
+    const idx = alphabet.indexOf(char);
+    if (idx === -1) return base32.toLowerCase();
+    value = (value << 5) | idx;
+    bits += 5;
+
+    while (bits >= 8) {
+      const byte = (value >>> (bits - 8)) & 0xff;
+      hex += byte.toString(16).padStart(2, '0');
+      bits -= 8;
+    }
+  }
+  return hex.toLowerCase();
 }
 
 async function computeSha1(bytes: Uint8Array): Promise<string> {
@@ -129,7 +153,12 @@ export function parseMagnetLink(url: string): { name: string; infoHash: string; 
   const xt = params.get('xt') || '';
   let infoHash = '';
   if (xt.startsWith('urn:btih:')) {
-    infoHash = xt.substring(9).toLowerCase();
+    const rawHash = xt.substring(9).trim();
+    if (rawHash.length === 32) {
+      infoHash = base32ToHex(rawHash);
+    } else {
+      infoHash = rawHash.toLowerCase();
+    }
   }
   const dn = params.get('dn') || '';
   const name = dn ? decodeURIComponent(dn) : 'Magnet Link';

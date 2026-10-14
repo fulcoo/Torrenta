@@ -105,6 +105,14 @@
             <TagIcon class="h-4 w-4" /> {{ t('settings.tabBitTorrent') }}
           </button>
           <button
+            type="button"
+            @click="selectTab('security')"
+            class="btn btn-sm justify-start gap-2.5 rounded-xl font-bold w-full border-none shadow-none text-left h-10 animate-fadeIn"
+            :class="activeTab === 'security' ? 'bg-primary text-primary-content hover:bg-primary/95' : 'bg-transparent hover:bg-base-content/10'"
+          >
+            <ShieldCheckIcon class="h-4 w-4" /> {{ t('settings.tabSecurity') }}
+          </button>
+          <button
             v-if="isDev"
             type="button"
             @click="selectTab('simulation')"
@@ -2269,6 +2277,201 @@
             </div>
           </div>
         </div>
+
+        <!-- 6. Security & Auth Panel -->
+        <div v-if="activeTab === 'security'" class="flex flex-col gap-6">
+          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-4 border-b border-base-content/10">
+              <div class="flex flex-col gap-1 text-left">
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <ShieldCheckIcon class="h-5 w-5 text-primary" /> {{ t('settings.securityTitle') }}
+                </h2>
+                <span class="text-xs opacity-60">{{ t('settings.securityDesc') }}</span>
+              </div>
+              <span
+                class="badge font-bold text-xs px-2.5 py-1 rounded-lg shrink-0"
+                :class="authForm.enabled ? 'badge-success text-success-content' : 'badge-ghost opacity-60'"
+              >
+                {{ authForm.enabled ? t('settings.sessionActive') : t('common.unknown') }}
+              </span>
+            </div>
+
+            <!-- Feedback Message -->
+            <transition name="slide-down">
+              <div
+                v-if="securityFeedback.text"
+                class="p-3 rounded-xl text-xs font-bold flex items-center gap-2"
+                :class="securityFeedback.type === 'success' ? 'bg-success/15 border border-success/30 text-success' : 'bg-error/15 border border-error/30 text-error'"
+              >
+                <CheckCircle2Icon v-if="securityFeedback.type === 'success'" class="h-4 w-4 shrink-0" />
+                <AlertCircleIcon v-else class="h-4 w-4 shrink-0" />
+                <span>{{ securityFeedback.text }}</span>
+              </div>
+            </transition>
+
+            <!-- Main Toggle Form -->
+            <div class="flex flex-col gap-5 text-left">
+              <!-- Enable Switch -->
+              <div class="form-control bg-base-200/50 border border-base-content/5 p-4 rounded-xl flex flex-row items-center justify-between gap-4">
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-sm font-bold flex items-center gap-2">
+                    <LockIcon class="h-4 w-4 text-primary" />
+                    {{ t('settings.enableAuth') }}
+                  </span>
+                  <span class="text-[11px] opacity-60">{{ t('settings.enableAuthDesc') }}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                  v-model="authForm.enabled"
+                />
+              </div>
+
+              <!-- Configuration Form (Visible when enabled) -->
+              <div v-if="authForm.enabled" class="flex flex-col gap-4 p-4 bg-base-200/30 rounded-2xl border border-base-content/5 animate-fadeIn">
+                <!-- Username -->
+                <div class="form-control w-full">
+                  <label class="label py-1 text-xs font-bold opacity-75">
+                    <span>{{ t('settings.authUsername') }}</span>
+                  </label>
+                  <div class="relative flex items-center">
+                    <UserIcon class="absolute left-3.5 h-4 w-4 opacity-40 pointer-events-none" />
+                    <input
+                      v-model="authForm.username"
+                      type="text"
+                      :placeholder="t('settings.authUsernamePlaceholder')"
+                      class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 !pl-10 pr-4 border border-base-content/10"
+                    />
+                  </div>
+                </div>
+
+                <!-- Passwords Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <!-- New Password -->
+                  <div class="form-control w-full">
+                    <label class="label py-1 text-xs font-bold opacity-75 justify-between">
+                      <span>{{ t('settings.authPassword') }}</span>
+                      <span v-if="authStore.authPassword" class="text-[10px] text-primary lowercase">{{ t('settings.authPasswordKeepTip') }}</span>
+                    </label>
+                    <div class="relative flex items-center">
+                      <KeyRoundIcon class="absolute left-3.5 h-4 w-4 opacity-40 pointer-events-none" />
+                      <input
+                        v-model="authForm.password"
+                        :type="authForm.showPassword ? 'text' : 'password'"
+                        :placeholder="authStore.authPassword ? '••••••••' : t('settings.authPasswordPlaceholder')"
+                        class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 !pl-10 pr-10 border border-base-content/10 font-mono"
+                      />
+                      <button
+                        type="button"
+                        @click="authForm.showPassword = !authForm.showPassword"
+                        class="absolute right-3 btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100"
+                      >
+                        <EyeOffIcon v-if="authForm.showPassword" class="h-4 w-4" />
+                        <EyeIcon v-else class="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Confirm Password -->
+                  <div class="form-control w-full">
+                    <label class="label py-1 text-xs font-bold opacity-75">
+                      <span>{{ t('settings.authPasswordConfirm') }}</span>
+                    </label>
+                    <div class="relative flex items-center">
+                      <KeyRoundIcon class="absolute left-3.5 h-4 w-4 opacity-40 pointer-events-none" />
+                      <input
+                        v-model="authForm.confirmPassword"
+                        :type="authForm.showConfirmPassword ? 'text' : 'password'"
+                        :placeholder="authStore.authPassword ? '••••••••' : t('settings.authPasswordConfirmPlaceholder')"
+                        class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 !pl-10 pr-10 border border-base-content/10 font-mono"
+                      />
+                      <button
+                        type="button"
+                        @click="authForm.showConfirmPassword = !authForm.showConfirmPassword"
+                        class="absolute right-3 btn btn-ghost btn-xs btn-circle opacity-50 hover:opacity-100"
+                      >
+                        <EyeOffIcon v-if="authForm.showConfirmPassword" class="h-4 w-4" />
+                        <EyeIcon v-else class="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 24-hour Session Note -->
+                <div class="flex items-start gap-3 p-3.5 rounded-xl bg-primary/5 border border-primary/15 text-xs text-base-content/80 mt-1">
+                  <ClockIcon class="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                  <div class="flex flex-col gap-0.5">
+                    <span class="font-bold text-primary">{{ t('auth.sessionPolicy') }}</span>
+                    <span class="text-[11px] opacity-70 leading-relaxed">{{ t('settings.securityDesc') }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex items-center justify-end gap-3 pt-4 border-t border-base-content/10">
+                <button
+                  type="button"
+                  @click="saveSecuritySettings"
+                  class="btn btn-primary btn-sm rounded-xl px-5 font-bold shadow-lg shadow-primary/20 flex items-center gap-2"
+                >
+                  <ShieldCheckIcon class="h-4 w-4" />
+                  <span>{{ t('settings.saveSecuritySettings') }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Session Info & Quick Lockout Card (Visible when active and authenticated) -->
+          <div v-if="authStore.authEnabled && authStore.isAuthenticated" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-4 text-left animate-fadeIn">
+            <div class="flex flex-col gap-1 border-b border-base-content/10 pb-3">
+              <h3 class="text-sm font-bold flex items-center gap-2">
+                <ClockIcon class="h-4 w-4 text-accent" />
+                {{ t('settings.authStatusTitle') }}
+              </h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <!-- Authenticated User -->
+              <div class="p-3 bg-base-200/50 rounded-xl border border-base-content/5 flex flex-col gap-1">
+                <span class="text-[10px] font-bold uppercase opacity-50">{{ t('settings.sessionUser') }}</span>
+                <span class="text-sm font-bold text-primary flex items-center gap-1.5">
+                  <UserIcon class="h-4 w-4" />
+                  {{ authStore.authUsername }}
+                </span>
+              </div>
+
+              <!-- Session State -->
+              <div class="p-3 bg-base-200/50 rounded-xl border border-base-content/5 flex flex-col gap-1">
+                <span class="text-[10px] font-bold uppercase opacity-50">{{ t('dashboard.status') }}</span>
+                <span class="text-sm font-bold text-success flex items-center gap-1.5">
+                  <CheckCircle2Icon class="h-4 w-4" />
+                  {{ t('settings.sessionActive') }}
+                </span>
+              </div>
+
+              <!-- Remaining Time -->
+              <div class="p-3 bg-base-200/50 rounded-xl border border-base-content/5 flex flex-col gap-1">
+                <span class="text-[10px] font-bold uppercase opacity-50">{{ t('settings.sessionExpiryTip') }}</span>
+                <span class="text-sm font-mono font-bold text-secondary flex items-center gap-1.5">
+                  <ClockIcon class="h-4 w-4" />
+                  {{ sessionRemainingFormatted }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button
+                type="button"
+                @click="handleLogoutNow"
+                class="btn btn-error btn-outline btn-sm rounded-xl font-bold gap-2"
+              >
+                <LogOutIcon class="h-4 w-4" />
+                {{ t('settings.logoutNow') }}
+              </button>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
 
@@ -2393,8 +2596,10 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick, watch } from 'vue';
 import { useAppStore } from '@/stores/app';
+import { useAuthStore } from '@/stores/auth';
 import CustomSelect from '@/components/CustomSelect.vue';
 import { useTorrentStore } from '@/stores/torrent';
+import { DownloaderFactory } from '@/services/adapters/factory';
 import { useI18n } from '@/i18n/useI18n';
 import {
   ArrowLeftIcon,
@@ -2429,9 +2634,16 @@ import {
   CopyIcon,
   GaugeIcon,
   InfoIcon,
+  ShieldCheckIcon,
+  LockIcon,
+  UserIcon,
+  LogOutIcon,
+  ClockIcon,
+  AlertCircleIcon,
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
+const authStore = useAuthStore();
 const torrentStore = useTorrentStore();
 const { t } = useI18n();
 const isDev = import.meta.env.DEV;
@@ -2464,7 +2676,7 @@ const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
 const errorLog = ref<string | null>(null);
 
 // Read initial tab from hash query (e.g. #/settings?tab=download)
-function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation' {
+function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'security' | 'simulation' {
   const hash = window.location.hash; // e.g. "#/settings?tab=download"
   const queryStart = hash.indexOf('?');
   if (queryStart !== -1) {
@@ -2475,6 +2687,7 @@ function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'bit
       tab === 'speed' ||
       tab === 'connection' ||
       tab === 'bittorrent' ||
+      tab === 'security' ||
       (tab === 'simulation' && isDev) ||
       tab === 'general'
     ) {
@@ -2484,10 +2697,10 @@ function getInitialTab(): 'general' | 'download' | 'speed' | 'connection' | 'bit
   return 'general';
 }
 
-const activeTab = ref<'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation'>(getInitialTab());
+const activeTab = ref<'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'security' | 'simulation'>(getInitialTab());
 const showMobileMenu = ref(false);
 
-function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation') {
+function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'security' | 'simulation') {
   if (tab === 'simulation' && !isDev) {
     activeTab.value = 'general';
   } else {
@@ -2496,16 +2709,111 @@ function selectTab(tab: 'general' | 'download' | 'speed' | 'connection' | 'bitto
   showMobileMenu.value = false;
 }
 
-function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'simulation') {
+function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'bittorrent' | 'security' | 'simulation') {
   switch (tab) {
     case 'general': return t('settings.tabGeneral');
     case 'download': return t('settings.tabDownload');
     case 'speed': return t('settings.tabSpeed');
     case 'connection': return t('settings.tabConnection');
     case 'bittorrent': return t('settings.tabBitTorrent');
+    case 'security': return t('settings.tabSecurity');
     case 'simulation': return t('settings.tabSimulation');
     default: return '';
   }
+}
+
+// Security & Authentication Configuration
+const authForm = reactive({
+  enabled: authStore.authEnabled,
+  username: authStore.authUsername || 'admin',
+  password: '',
+  confirmPassword: '',
+  showPassword: false,
+  showConfirmPassword: false,
+});
+
+// Watch external changes to authStore
+watch(
+  () => authStore.authEnabled,
+  (val) => {
+    authForm.enabled = val;
+  }
+);
+watch(
+  () => authStore.authUsername,
+  (val) => {
+    authForm.username = val;
+  }
+);
+
+const securityFeedback = reactive<{
+  text: string;
+  type: 'success' | 'error';
+}>({
+  text: '',
+  type: 'success',
+});
+
+let securityFeedbackTimer: any = null;
+
+function showSecurityFeedback(text: string, type: 'success' | 'error' = 'success') {
+  securityFeedback.text = text;
+  securityFeedback.type = type;
+  if (securityFeedbackTimer) clearTimeout(securityFeedbackTimer);
+  securityFeedbackTimer = setTimeout(() => {
+    securityFeedback.text = '';
+  }, 4000);
+}
+
+function saveSecuritySettings() {
+  const cleanUser = authForm.username.trim();
+  if (!cleanUser) {
+    showSecurityFeedback(t('settings.authUsernameEmpty'), 'error');
+    return;
+  }
+
+  if (authForm.enabled) {
+    // If enabling and no existing password, password is required
+    if (!authStore.authPassword && !authForm.password) {
+      showSecurityFeedback(t('settings.authPasswordEmpty'), 'error');
+      return;
+    }
+
+    // If user typed a password, confirm password must match
+    if (authForm.password) {
+      if (authForm.password !== authForm.confirmPassword) {
+        showSecurityFeedback(t('settings.authPasswordMismatch'), 'error');
+        return;
+      }
+    }
+  }
+
+  authStore.updateAuthConfig({
+    enabled: authForm.enabled,
+    username: cleanUser,
+    password: authForm.password ? authForm.password : undefined,
+  });
+
+  appStore.scheduleServerSync();
+  authForm.password = '';
+  authForm.confirmPassword = '';
+  showSecurityFeedback(t('settings.authSaved'), 'success');
+}
+
+const sessionRemainingFormatted = computed(() => {
+  const ms = authStore.remainingTimeMs;
+  if (ms <= 0) return '0 ' + t('common.minute');
+  const totalMinutes = Math.floor(ms / (60 * 1000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours > 0) {
+    return `${hours} ${t('common.hour')} ${minutes} ${t('common.minute')}`;
+  }
+  return `${minutes} ${t('common.minute')}`;
+});
+
+function handleLogoutNow() {
+  authStore.logout();
 }
 
 const prefs = reactive({
@@ -2990,9 +3298,7 @@ onMounted(() => {
 
   // Attempt connection boot if not connected yet and not polling
   if (!torrentStore.isConnected && !torrentStore.isPollingActive) {
-    torrentStore.bootClient().then(() => {
-      torrentStore.triggerSyncLoop();
-    }).catch((e) => {
+    torrentStore.bootClient().catch((e) => {
       console.warn('Settings boot sync connection not ready:', e);
     });
   }
@@ -3069,20 +3375,14 @@ async function testConnection() {
   errorLog.value = null;
 
   try {
-    // Write temporarily to local storage so adapter axios request fetches it
-    localStorage.setItem(
-      'torrenta_app_config',
-      JSON.stringify({ url: form.url, username: form.username })
-    );
-
-    // Boot client using the factory adapter connect mechanism
-    const tempStore = useTorrentStore();
-    
-    // Save state temporarily
-    appStore.saveConfig(form.url, form.username, form.password, form.driverType);
-    await tempStore.bootClient();
-    
-    testStatus.value = 'success';
+    const testDriver = DownloaderFactory.create(form.driverType);
+    const success = await testDriver.connect(form.url, form.username, form.password);
+    if (success) {
+      testStatus.value = 'success';
+    } else {
+      testStatus.value = 'error';
+      errorLog.value = t('settings.connTimeout');
+    }
   } catch (err: any) {
     testStatus.value = 'error';
     errorLog.value = err.message || t('settings.connTimeout');

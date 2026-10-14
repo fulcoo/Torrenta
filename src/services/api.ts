@@ -64,3 +64,110 @@ api.interceptors.request.use((config) => {
 }, (error) => {
   return Promise.reject(error);
 });
+
+// Mutex lock for silent re-authentication to prevent multiple concurrent login requests
+let isReauthenticating = false;
+let reauthPromise: Promise<boolean> | null = null;
+
+export async function silentReauth(): Promise<boolean> {
+  if (isReauthenticating && reauthPromise) {
+    return reauthPromise;
+  }
+  isReauthenticating = true;
+  reauthPromise = (async () => {
+    try {
+      let finalUser = safeStorage.getItem('torrenta_username') || safeStorage.getItem('torrenta_auth_username') || '';
+      let finalPass = safeStorage.getItem('torrenta_password') || safeStorage.getItem('torrenta_auth_password') || '';
+
+      // Check if backend autologin endpoint can provide credentials if none stored locally
+      if (!finalUser && !finalPass && typeof window !== 'undefined' && typeof window.fetch === 'function') {
+        try {
+          const autoRes = await window.fetch('/api/torrenta-autologin');
+          if (autoRes.ok) {
+            const autoData = await autoRes.json();
+            if (autoData?.username || autoData?.password) {
+              finalUser = autoData.username || '';
+              finalPass = autoData.password || '';
+            }
+          }
+        } catch {
+          // Ignore autologin fetch failures
+        }
+      }
+
+      if (!finalUser && !finalPass) {
+        return false;
+      }
+
+      const params = new URLSearchParams();
+      if (finalUser) params.append('username', finalUser);
+      if (finalPass) params.append('password', finalPass);
+
+      const storeData = safeStorage.getJSON<{ url?: string }>('torrenta_app_config', {});
+      let loginBaseUrl = '/api/v2';
+      if (storeData && storeData.url) {
+        const urlStr = storeData.url.toLowerCase();
+        if (
+          import.meta.env.DEV &&
+          (urlStr.includes('localhost:8080') ||
+           urlStr.includes('127.0.0.1:8080') ||
+           urlStr.includes('[::1]:8080'))
+        ) {
+          loginBaseUrl = '/api/v2';
+        } else {
+          loginBaseUrl = resolveBaseUrl(storeData.url);
+        }
+      }
+
+      // Directly call axios.post with independent config to bypass interceptor recursion
+      const loginRes = await axios.post(`${loginBaseUrl}/auth/login`, params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        withCredentials: true,
+        timeout: 10000,
+      });
+
+      if (loginRes.data && typeof loginRes.data === 'string' && loginRes.data.trim() === 'Fails.') {
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.warn('Silent re-authentication to qBittorrent failed:', err);
+      return false;
+    } finally {
+      isReauthenticating = false;
+      reauthPromise = null;
+    }
+  })();
+  return reauthPromise;
+}
+
+// Response interceptor to handle session expiration (401/403) and transparently re-login
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    const status = error.response?.status;
+    const url = originalRequest.url || '';
+
+    // If session expired (401 or 403) and not already retrying or logging in
+    if ((status === 401 || status === 403) && !originalRequest._retry && !url.includes('/auth/login')) {
+      originalRequest._retry = true;
+      try {
+        const reloginSuccess = await silentReauth();
+        if (reloginSuccess) {
+          // Re-execute original request with refreshed SID cookie
+          return api(originalRequest);
+        }
+      } catch (reauthErr) {
+        return Promise.reject(reauthErr);
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+

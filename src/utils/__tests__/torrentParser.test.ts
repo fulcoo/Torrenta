@@ -129,8 +129,27 @@ describe('torrentParser', () => {
       });
     });
 
+    it('should parse base32 encoded magnet links and convert to 40-char hex', () => {
+      // 32-character base32 btih
+      const base32Url = 'magnet:?xt=urn:btih:VK7V6V2KZZZZZZZZZZZZZZZZZZZZZZZZ&dn=Base32Test';
+      const parsed = parseMagnetLink(base32Url);
+      expect(parsed).toBeDefined();
+      expect(parsed?.name).toBe('Base32Test');
+      expect(parsed?.infoHash).toHaveLength(40);
+      expect(parsed?.infoHash).toMatch(/^[0-9a-f]{40}$/);
+    });
+
     it('should return null for non-magnet links', () => {
       expect(parseMagnetLink('http://example.com')).toBeNull();
+    });
+  });
+
+  describe('decodeBencode depth guard', () => {
+    it('should throw error when bencode nesting depth exceeds limit', () => {
+      // Generate 250 nested lists: l...le...e
+      const deeplyNested = 'l'.repeat(250) + 'i1e' + 'e'.repeat(250);
+      const buffer = stringToUint8Array(deeplyNested);
+      expect(() => decodeBencode(buffer)).toThrow('Exceeded maximum bencode nesting depth');
     });
   });
 

@@ -63,7 +63,7 @@
             class="text-xs font-black tabular-nums"
             :class="progressTextColorClass"
           >
-            {{ torrent.progress.toFixed(1) }}%
+            {{ (torrent.progress ?? 0).toFixed(1) }}%
           </span>
         </div>
       </div>
@@ -143,7 +143,7 @@
         <div class="hidden sm:flex items-center gap-1 text-[10px] font-bold shrink-0">
           <span class="text-base-content/15">|</span>
           <span class="text-base-content/40">{{ t('torrent.ratio', { ratio: '' }).replace(':', '').trim() }}:</span>
-          <span class="text-base-content/80 font-mono">{{ torrent.ratio.toFixed(2) }}</span>
+          <span class="text-base-content/80 font-mono">{{ (torrent.ratio ?? 0).toFixed(2) }}</span>
         </div>
  
         <!-- Uploaded volume (Hidden on Mobile) -->
@@ -293,7 +293,7 @@ const progressBgStyle = computed(() => {
   }
   
   return {
-    width: props.torrent.progress + '%',
+    width: Math.min(100, Math.max(0, props.torrent.progress ?? 0)) + '%',
     opacity: opacity
   };
 });
@@ -407,15 +407,20 @@ function formatEta(seconds: number): string {
 
 // Format date helper
 function formatDate(timestamp?: number): string {
-  if (!timestamp) return '';
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleString(undefined, {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  if (!timestamp || !Number.isFinite(timestamp) || timestamp <= 0) return '';
+  try {
+    const date = new Date(timestamp * 1000);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  } catch {
+    return '';
+  }
 }
 
 // Display date text computed based on state

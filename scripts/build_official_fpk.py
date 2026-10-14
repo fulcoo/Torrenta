@@ -327,12 +327,12 @@ def main():
 
     # 4.2 写入 manifest 清单 (统一从 package.json 读取版本号，实现单一数据源维护)
     pkg_path = os.path.join(ROOT_DIR, "package.json")
-    app_version = "0.2.7"
+    app_version = "0.3.1"
     if os.path.exists(pkg_path):
         try:
             with open(pkg_path, "r", encoding="utf-8") as pf:
                 pkg_data = json.load(pf)
-                app_version = pkg_data.get("version", "0.2.7")
+                app_version = pkg_data.get("version", "0.3.1")
         except Exception as e:
             print(f"⚠️ 读取 package.json 版本号失败，使用默认版本: {e}")
 
