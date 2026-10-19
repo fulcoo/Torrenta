@@ -16,7 +16,9 @@ import {
   XIcon,
   MenuIcon,
   ShieldCheckIcon,
-  LogOutIcon
+  LogOutIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
@@ -35,6 +37,26 @@ function handleDocumentClick(e: MouseEvent) {
   }
 }
 
+function handleKeydown(e: KeyboardEvent) {
+  const activeEl = document.activeElement;
+  if (
+    activeEl &&
+    (activeEl.tagName === 'INPUT' ||
+      activeEl.tagName === 'TEXTAREA' ||
+      activeEl.tagName === 'SELECT' ||
+      (activeEl as HTMLElement).isContentEditable)
+  ) {
+    return;
+  }
+
+  if (isDashboard.value) {
+    if (e.key === '[' || (e.altKey && e.key.toLowerCase() === 's') || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b')) {
+      e.preventDefault();
+      appStore.toggleSidebarCollapse();
+    }
+  }
+}
+
 onMounted(() => {
   // Sync state on hashchange
   window.addEventListener('hashchange', () => {
@@ -44,6 +66,7 @@ onMounted(() => {
   // Apply default configured theme to html tag
   document.documentElement.setAttribute('data-theme', appStore.theme);
   document.addEventListener('click', handleDocumentClick);
+  window.addEventListener('keydown', handleKeydown);
 
   // Attempt initial client boot to check connection
   if (!torrentStore.hasAttemptedBoot) {
@@ -53,6 +76,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick);
+  window.removeEventListener('keydown', handleKeydown);
 });
 
 const routes: Record<string, any> = {
@@ -100,6 +124,18 @@ const isSettings = computed(() => {
           >
             <MenuIcon class="h-4 w-4" />
             <span class="text-xs font-black">{{ t('dashboard.filters') }}</span>
+          </button>
+          
+          <!-- Desktop Sidebar Collapse Toggle for Dashboard -->
+          <button 
+            v-if="isDashboard" 
+            type="button"
+            @click="appStore.toggleSidebarCollapse()" 
+            class="btn btn-ghost btn-sm rounded-xl hidden lg:flex items-center gap-1.5 px-2.5 border border-base-content/10 bg-base-200/50 hover:bg-base-200 text-base-content transition-all duration-200"
+            :title="appStore.isSidebarCollapsed ? `${t('dashboard.expandSidebar')} ([)` : `${t('dashboard.collapseSidebar')} ([)`"
+          >
+            <PanelLeftOpenIcon v-if="appStore.isSidebarCollapsed" class="h-4 w-4 text-primary" />
+            <PanelLeftCloseIcon v-else class="h-4 w-4 opacity-70 hover:opacity-100" />
           </button>
           
           <!-- Logo -->

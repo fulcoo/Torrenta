@@ -24,11 +24,18 @@
     </div>
 
     <!-- Main Grid Dashboard Console -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 items-start">
+    <div 
+      class="grid grid-cols-1 items-start transition-all duration-300"
+      :class="appStore.isSidebarCollapsed ? 'lg:grid-cols-1' : 'lg:grid-cols-4 gap-6'"
+    >
       <!-- Filter Sidebar Column (Desktop persistent, Mobile drawer popup) -->
       <aside 
-        class="lg:col-span-1 transition-all duration-300 lg:block"
-        :class="appStore.showMobileSidebar ? 'fixed inset-0 z-50 p-4 bg-black/60 backdrop-blur-sm flex justify-start' : 'hidden'"
+        class="transition-all duration-300"
+        :class="[
+          appStore.showMobileSidebar 
+            ? 'fixed inset-0 z-50 p-4 bg-black/60 backdrop-blur-sm flex justify-start' 
+            : (appStore.isSidebarCollapsed ? 'hidden' : 'hidden lg:block lg:col-span-1')
+        ]"
         @click.self="appStore.showMobileSidebar = false"
       >
         <div 
@@ -46,11 +53,32 @@
       </aside>
 
       <!-- Central Console list panel -->
-      <main class="lg:col-span-3 flex flex-col gap-4 w-full">
+      <main 
+        class="flex flex-col gap-4 w-full transition-all duration-300"
+        :class="appStore.isSidebarCollapsed ? 'lg:col-span-1' : 'lg:col-span-3'"
+      >
         <!-- Control Toolbar: Actions, Search, Sort & Mobiles Toggles -->
         <div class="flex flex-row items-center justify-between gap-2.5 p-2 sm:p-3.5 rounded-2xl bg-base-100 border border-base-content/10 shadow-sm">
-          <!-- Left side: Select All Checkbox & Add Torrent Button -->
+          <!-- Left side: Expand Button (when collapsed) + Select All Checkbox & Add Torrent Button -->
           <div class="flex items-center gap-2 sm:gap-3.5 shrink-0">
+            <!-- Desktop Expand Sidebar Button (Shown when sidebar is collapsed) -->
+            <button
+              v-if="appStore.isSidebarCollapsed"
+              type="button"
+              @click="appStore.toggleSidebarCollapse()"
+              class="btn btn-ghost btn-sm rounded-xl hidden lg:flex items-center gap-1.5 px-2.5 border border-base-content/10 bg-base-200/50 hover:bg-base-200 text-base-content transition-all shrink-0"
+              :title="`${t('dashboard.expandSidebar')} ([)`"
+            >
+              <PanelLeftOpenIcon class="h-4 w-4 text-primary" />
+              <span class="text-xs font-bold">{{ t('dashboard.filters') }}</span>
+              <span
+                v-if="activeFilterSummary"
+                class="badge badge-primary badge-xs py-1 px-1.5 text-[10px] font-semibold"
+              >
+                {{ activeFilterSummary }}
+              </span>
+            </button>
+
             <!-- Select All Checkbox -->
             <label class="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none shrink-0">
               <input
@@ -1282,6 +1310,7 @@ import {
   ChevronRightIcon,
   GlobeIcon,
   CopyIcon,
+  PanelLeftOpenIcon,
 } from 'lucide-vue-next';
 
 const torrentStore = useTorrentStore();
@@ -1695,6 +1724,26 @@ const activeTracker = ref('');
 const activeTag = ref('');
 const activeSavePath = ref('');
 const deleteTargetName = ref('');
+
+const activeFilterSummary = computed(() => {
+  if (activeStatus.value !== 'all') {
+    return t(`sidebar.${activeStatus.value}`);
+  }
+  if (activeCategory.value) {
+    return activeCategory.value;
+  }
+  if (activeTag.value) {
+    return activeTag.value;
+  }
+  if (activeTracker.value) {
+    return activeTracker.value;
+  }
+  if (activeSavePath.value) {
+    const parts = activeSavePath.value.split(/[\\/]/).filter(Boolean);
+    return parts[parts.length - 1] || activeSavePath.value;
+  }
+  return null;
+});
 
 
 

@@ -157,6 +157,14 @@ describe('appStore', () => {
     store.toggleSpeedChartCollapsed();
     expect(store.speedChartCollapsed).toBe(true);
     expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
+
+    expect(store.isSidebarCollapsed).toBe(false);
+    store.toggleSidebarCollapse();
+    expect(store.isSidebarCollapsed).toBe(true);
+    expect(safeStorage.getItem('torrenta_sidebar_collapsed_overall')).toBe('true');
+    store.setSidebarCollapsedOverall(false);
+    expect(store.isSidebarCollapsed).toBe(false);
+    expect(safeStorage.getItem('torrenta_sidebar_collapsed_overall')).toBe('false');
   });
 
   it('should hydrate settings from server via loadServerSettings', async () => {
@@ -171,6 +179,7 @@ describe('appStore', () => {
         order: ['tag', 'category', 'status'],
         hidden: ['savepath'],
         collapsed: { status: true },
+        isCollapsed: true,
       },
       task_defaults: {
         autoTMM: false,
@@ -189,6 +198,8 @@ describe('appStore', () => {
     expect(store.locale).toBe('zh');
     expect(store.speedChartCollapsed).toBe(true);
     expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
+    expect(store.isSidebarCollapsed).toBe(true);
+    expect(safeStorage.getItem('torrenta_sidebar_collapsed_overall')).toBe('true');
     expect(store.categoryConfigs).toEqual([{ name: 'Movies', paths: ['/media/movies'] }]);
     expect(store.sidebarOrder).toEqual(['tag', 'category', 'status']);
     expect(store.sidebarHidden).toEqual(['savepath']);

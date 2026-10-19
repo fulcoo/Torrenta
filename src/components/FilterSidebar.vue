@@ -1,5 +1,35 @@
 <template>
   <div class="flex flex-col h-full p-4 w-full bg-base-100 rounded-2xl shadow-md text-base-content border border-base-content/10">
+    <!-- Sidebar Header (Title + Collapse/Close button) -->
+    <div class="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-base-content/10">
+      <div class="flex items-center gap-2">
+        <SlidersIcon class="h-4 w-4 text-primary" />
+        <span class="font-black text-xs tracking-wider uppercase opacity-80">
+          {{ t('dashboard.filters') }}
+        </span>
+      </div>
+      <div class="flex items-center gap-1">
+        <!-- Desktop Collapse Button -->
+        <button
+          type="button"
+          @click="appStore.toggleSidebarCollapse()"
+          class="btn btn-ghost btn-xs btn-circle hidden lg:flex text-base-content/60 hover:text-base-content hover:bg-base-200"
+          :title="`${t('dashboard.collapseSidebar')} ([)`"
+        >
+          <PanelLeftCloseIcon class="h-4 w-4" />
+        </button>
+        <!-- Mobile Close Button -->
+        <button
+          type="button"
+          @click="appStore.showMobileSidebar = false"
+          class="btn btn-ghost btn-xs btn-circle lg:hidden text-base-content/60 hover:text-base-content hover:bg-base-200"
+          :title="t('common.close')"
+        >
+          <XIcon class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+
     <template v-for="(section, idx) in visibleSections" :key="section">
       <!-- Divider between sections (never before the first section) -->
       <div v-if="idx > 0" class="divider my-2 before:bg-base-content/10 after:bg-base-content/10"></div>
@@ -372,6 +402,9 @@ import {
   TagIcon,
   ChevronDownIcon,
   HardDriveIcon,
+  PanelLeftCloseIcon,
+  SlidersIcon,
+  XIcon,
 } from 'lucide-vue-next';
 import { matchTorrentStatus } from '@/utils/torrentStatus';
 

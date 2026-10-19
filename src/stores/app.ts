@@ -45,6 +45,7 @@ export const useAppStore = defineStore('appStore', () => {
     })
   );
   const speedChartCollapsed = ref(safeStorage.getItem('torrenta_speed_chart_collapsed') === 'true');
+  const isSidebarCollapsed = ref(safeStorage.getItem('torrenta_sidebar_collapsed_overall') === 'true');
 
   // Default torrent add options
   const addToTopOfQueue = ref(safeStorage.getItem('torrenta_add_to_top_of_queue') === 'true');
@@ -85,6 +86,7 @@ export const useAppStore = defineStore('appStore', () => {
           order: sidebarOrder.value,
           hidden: sidebarHidden.value,
           collapsed: sidebarCollapsed.value,
+          isCollapsed: isSidebarCollapsed.value,
         },
         category_mapping: {
           categoryConfigs: categoryConfigs.value,
@@ -174,6 +176,10 @@ export const useAppStore = defineStore('appStore', () => {
         if (data.sidebar.collapsed && typeof data.sidebar.collapsed === 'object') {
           sidebarCollapsed.value = { ...sidebarCollapsed.value, ...data.sidebar.collapsed };
           safeStorage.setJSON('torrenta_sidebar_collapsed', sidebarCollapsed.value);
+        }
+        if (typeof data.sidebar.isCollapsed === 'boolean') {
+          isSidebarCollapsed.value = data.sidebar.isCollapsed;
+          safeStorage.setItem('torrenta_sidebar_collapsed_overall', String(data.sidebar.isCollapsed));
         }
       }
 
@@ -367,6 +373,18 @@ export const useAppStore = defineStore('appStore', () => {
     scheduleServerSync();
   }
 
+  function setSidebarCollapsedOverall(val: boolean) {
+    isSidebarCollapsed.value = val;
+    safeStorage.setItem('torrenta_sidebar_collapsed_overall', String(val));
+    scheduleServerSync();
+  }
+
+  function toggleSidebarCollapse() {
+    isSidebarCollapsed.value = !isSidebarCollapsed.value;
+    safeStorage.setItem('torrenta_sidebar_collapsed_overall', String(isSidebarCollapsed.value));
+    scheduleServerSync();
+  }
+
   function setSpeedChartCollapsed(val: boolean) {
     speedChartCollapsed.value = val;
     safeStorage.setItem('torrenta_speed_chart_collapsed', String(val));
@@ -497,11 +515,14 @@ export const useAppStore = defineStore('appStore', () => {
     sidebarOrder,
     sidebarHidden,
     sidebarCollapsed,
+    isSidebarCollapsed,
     speedChartCollapsed,
     setSidebarOrder,
     setSidebarHidden,
     setSidebarCollapsed,
     toggleSidebarCollapsed,
+    setSidebarCollapsedOverall,
+    toggleSidebarCollapse,
     setSpeedChartCollapsed,
     toggleSpeedChartCollapsed,
     loadServerSettings,
