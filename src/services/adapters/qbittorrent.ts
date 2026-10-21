@@ -66,6 +66,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
           completion_on: t.completion_on || 0,
           savepath: t.save_path || '',
           tags: (t.tags && typeof t.tags === 'string') ? t.tags.split(',').map((tag: any) => tag.trim()).filter(Boolean) : [],
+          magnet_uri: t.magnet_uri || (t.hash ? `magnet:?xt=urn:btih:${t.hash}${t.name ? `&dn=${encodeURIComponent(t.name)}` : ''}` : ''),
         }));
     } catch (err) {
       console.error('Failed to get qBittorrent torrents:', err);

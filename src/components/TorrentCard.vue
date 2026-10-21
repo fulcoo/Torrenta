@@ -3,6 +3,7 @@
     class="flex flex-row items-center gap-1.5 sm:gap-3.5 p-3 sm:py-3 sm:px-4.5 rounded-xl transition-all duration-300 hover:scale-[1.002] hover:shadow-md group relative overflow-hidden border cursor-pointer select-none shrink-0"
     :class="selected ? 'bg-base-200 border-primary/30 shadow-md' : 'bg-base-100 border-base-content/10 shadow-sm'"
     @click="$emit('click-card')"
+    @contextmenu.prevent="$emit('contextmenu', $event)"
   >
     <!-- Left Visualizer solid vertical bar -->
     <div
@@ -224,6 +225,7 @@ defineEmits<{
   (e: 'resume'): void;
   (e: 'delete'): void;
   (e: 'click-card'): void;
+  (e: 'contextmenu', event: MouseEvent): void;
 }>();
 
 const { t } = useI18n();

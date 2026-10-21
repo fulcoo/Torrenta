@@ -1,5 +1,20 @@
 <template>
   <div class="flex flex-col gap-6 p-4 sm:p-6 text-base-content max-w-[1600px] mx-auto h-full">
+    <!-- Global Floating Toast Notification -->
+    <div 
+      v-if="toastMessage" 
+      class="toast toast-top toast-center z-[200] pointer-events-none transition-all duration-300"
+    >
+      <div 
+        class="alert shadow-2xl py-2 px-4 rounded-xl flex items-center gap-2 text-xs font-bold pointer-events-auto border"
+        :class="toastType === 'success' ? 'bg-success text-success-content border-success/30' : 'bg-error text-error-content border-error/30'"
+      >
+        <CheckCircleIcon v-if="toastType === 'success'" class="h-4 w-4 shrink-0" />
+        <AlertTriangleIcon v-else class="h-4 w-4 shrink-0" />
+        <span>{{ toastMessage }}</span>
+      </div>
+    </div>
+
     <!-- Connection Offline Warning Banner -->
     <div 
       v-if="!torrentStore.isConnected" 
@@ -576,7 +591,18 @@
                 </div>
 
                 <div class="flex flex-col gap-0.5">
-                  <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.infoHashV1') }}</span>
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold opacity-45 uppercase tracking-wider">{{ t('torrent.infoHashV1') }}</span>
+                    <button
+                      type="button"
+                      @click="copyTorrentMagnet(selectedDetailTorrent)"
+                      class="text-[10px] text-primary hover:underline flex items-center gap-1 font-bold cursor-pointer"
+                      :title="t('torrent.copyMagnet')"
+                    >
+                      <MagnetIcon class="h-3 w-3" />
+                      <span>{{ t('torrent.copyMagnet') }}</span>
+                    </button>
+                  </div>
                   <span class="font-bold text-[10px] text-base-content/75 select-text bg-base-200/25 px-2 py-1 rounded border border-base-content/5 break-all font-mono">
                     {{ selectedDetailTorrent.id }}
                   </span>
@@ -969,6 +995,15 @@
         <span>{{ t('torrent.forceStart') }}</span>
       </button>
 
+      <!-- Option: Copy Magnet Link -->
+      <button 
+        @click="handleContextAction('copy-magnet')" 
+        class="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-base-content/10 text-left text-base-content"
+      >
+        <MagnetIcon class="h-4 w-4 opacity-70 text-primary" />
+        <span>{{ t('torrent.copyMagnet') }}</span>
+      </button>
+
       <!-- Option: Rename -->
       <button 
         @click="handleContextAction('rename')" 
@@ -1306,16 +1341,44 @@ import {
   FolderOpenIcon,
   FolderIcon,
   CheckIcon,
+  CheckCircleIcon,
   TagIcon,
   ChevronRightIcon,
   GlobeIcon,
   CopyIcon,
+  MagnetIcon,
   PanelLeftOpenIcon,
 } from 'lucide-vue-next';
+import { copyToClipboard, generateMagnetUri } from '@/utils/clipboard';
 
 const torrentStore = useTorrentStore();
 const appStore = useAppStore();
 const { t } = useI18n();
+
+// Global floating toast state
+const toastMessage = ref('');
+const toastType = ref<'success' | 'error'>('success');
+let toastTimer: any = null;
+
+function showToast(message: string, type: 'success' | 'error' = 'success') {
+  if (toastTimer) clearTimeout(toastTimer);
+  toastMessage.value = message;
+  toastType.value = type;
+  toastTimer = setTimeout(() => {
+    toastMessage.value = '';
+  }, 2500);
+}
+
+async function copyTorrentMagnet(torrent?: UnifiedTorrent | null) {
+  if (!torrent) return;
+  const magnet = torrent.magnet_uri || generateMagnetUri(torrent);
+  const ok = await copyToClipboard(magnet);
+  if (ok) {
+    showToast(t('torrent.magnetCopied'), 'success');
+  } else {
+    showToast(t('torrent.copyFailed'), 'error');
+  }
+}
 
 const selectedDetailTorrent = ref<UnifiedTorrent | null>(null);
 const detailProperties = ref<TorrentProperties | null>(null);
@@ -2050,7 +2113,7 @@ function openContextMenu(e: MouseEvent, torrent: UnifiedTorrent) {
   
   // Viewport safety boundary check
   const menuWidth = 224;
-  const menuHeight = 310;
+  const menuHeight = 350;
   if (x + menuWidth > window.innerWidth) {
     x = window.innerWidth - menuWidth - 8;
   }
@@ -2255,6 +2318,9 @@ async function handleContextAction(action: string) {
       break;
     case 'force-start':
       await forceStartTorrent(torrent);
+      break;
+    case 'copy-magnet':
+      await copyTorrentMagnet(torrent);
       break;
     case 'rename':
       openRenameModal(torrent);

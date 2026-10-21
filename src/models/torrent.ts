@@ -20,6 +20,7 @@ export interface UnifiedTorrent {
   completion_on?: number;
   savepath?: string;
   tags?: string[];
+  magnet_uri?: string;
 }
 
 export interface GlobalState {

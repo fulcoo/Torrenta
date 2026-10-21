@@ -100,7 +100,25 @@ describe('QBittorrentAdapter', () => {
         completion_on: 1600005000,
         savepath: '/downloads',
         tags: ['tag1', 'tag2'],
+        magnet_uri: 'magnet:?xt=urn:btih:hash1&dn=Torrent%201',
       });
+    });
+
+    it('should use raw magnet_uri if provided', async () => {
+      const mockRawTorrents = [
+        {
+          hash: 'hash2',
+          name: 'Torrent 2',
+          state: 'downloading',
+          magnet_uri: 'magnet:?xt=urn:btih:hash2&dn=CustomName&tr=http://tracker.com',
+        },
+      ];
+
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockRawTorrents });
+
+      const torrents = await adapter.getTorrents();
+      expect(torrents).toHaveLength(1);
+      expect(torrents[0].magnet_uri).toBe('magnet:?xt=urn:btih:hash2&dn=CustomName&tr=http://tracker.com');
     });
 
     it('should return empty list if getTorrents api call fails', async () => {

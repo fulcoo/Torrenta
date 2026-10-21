@@ -195,6 +195,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         completion_on: mockCompletionOn,
         savepath: template.category ? `/downloads/${template.category.toLowerCase()}` : '/downloads/unclassified',
         tags: mockTags,
+        magnet_uri: `magnet:?xt=urn:btih:${id}&dn=${encodeURIComponent(template.name)}${suffix}&tr=${encodeURIComponent('udp://tracker.coppersurfer.tk:6969/announce')}`,
       });
     }
     simulatedTorrents.value = list;
