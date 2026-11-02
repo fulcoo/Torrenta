@@ -116,4 +116,15 @@ describe('torrentStore', () => {
     expect(res).toBe(true);
     expect(store.torrents.find((t) => t.id === targetId)?.category).toBe('NewCat');
   });
+
+  it('should use defaultCategory when adding torrents without category specified', async () => {
+    const appStore = useAppStore();
+    appStore.setSimulationMode(true);
+    appStore.setDefaultCategory('DefaultMovies');
+
+    const store = useTorrentStore();
+    await store.addTorrents({ urls: 'https://example.com/test.torrent' });
+
+    expect(store.torrents[0].category).toBe('DefaultMovies');
+  });
 });

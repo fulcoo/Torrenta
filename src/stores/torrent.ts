@@ -599,36 +599,81 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           }
         }
       } catch (err: any) {
-        consecutiveFailures++;
-        console.warn(`Torrenta telemetry dropped sync (${consecutiveFailures}/${MAX_FAILURES_BEFORE_DISCONNECT}):`, err);
-        // Only set disconnected after 3 consecutive failures to avoid flapping on transient blips
-        if (consecutiveFailures >= MAX_FAILURES_BEFORE_DISCONNECT) {
-          isConnected.value = false;
-          connectionError.value = err?.message || 'Connection lost';
+        const isDocHidden = typeof document !== 'undefined' && document.hidden;
+        // Do not penalize connection state or count failures when document is hidden in mobile background
+        if (!isDocHidden) {
+          consecutiveFailures++;
+          console.warn(`Torrenta telemetry dropped sync (${consecutiveFailures}/${MAX_FAILURES_BEFORE_DISCONNECT}):`, err);
+          // Only set disconnected after consecutive failures while active/visible to avoid flapping on transient blips
+          if (consecutiveFailures >= MAX_FAILURES_BEFORE_DISCONNECT) {
+            isConnected.value = false;
+            connectionError.value = err?.message || 'Connection lost';
+          }
         }
       } finally {
         isFetching = false;
-        // Schedule next poll recursively with adaptive delay (8s in background, 2.5s when active)
+        // Schedule next poll recursively
         if (isPollingActive.value) {
           const isDocHidden = typeof document !== 'undefined' && document.hidden;
-          const pollDelay = isDocHidden ? 8000 : 2500;
+          // When active, poll every 2500ms.
+          // When hidden (mobile background / minimized), pause aggressive polling to avoid OS socket errors and battery drain.
+          // Fallback keepalive for desktop tabs at 60s.
+          const pollDelay = isDocHidden ? 60000 : 2500;
           pollTimeoutId = setTimeout(poll, pollDelay);
         }
       }
     }
 
-    // Bind visibilitychange listener once to resume polling immediately when tab becomes visible
+    // Bind visibility and focus listeners once to resume polling immediately when tab becomes visible
     if (typeof document !== 'undefined' && !(window as any).__torrenta_visibility_bound) {
       (window as any).__torrenta_visibility_bound = true;
+
+      let lastWakeupTime = 0;
+      const resumePollingImmediately = () => {
+        if (!isPollingActive.value) return;
+        const now = Date.now();
+        if (now - lastWakeupTime < 400) return; // Debounce rapid dual triggers (e.g. visibility + focus)
+        lastWakeupTime = now;
+
+        // Reset failure counter on wake-up to give fresh connection opportunity
+        consecutiveFailures = 0;
+
+        // Release lock if a previous request was suspended mid-flight during backgrounding
+        isFetching = false;
+
+        if (pollTimeoutId) {
+          clearTimeout(pollTimeoutId);
+          pollTimeoutId = null;
+        }
+
+        poll();
+      };
+
       document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible' && isPollingActive.value && !isFetching) {
+        if (document.visibilityState === 'visible') {
+          resumePollingImmediately();
+        } else {
+          // Document hidden: cancel near-term background timeout to save battery and avoid socket errors
           if (pollTimeoutId) {
             clearTimeout(pollTimeoutId);
             pollTimeoutId = null;
           }
-          poll();
         }
       });
+
+      if (typeof window !== 'undefined') {
+        window.addEventListener('pageshow', () => {
+          resumePollingImmediately();
+        });
+
+        window.addEventListener('focus', () => {
+          resumePollingImmediately();
+        });
+
+        window.addEventListener('online', () => {
+          resumePollingImmediately();
+        });
+      }
     }
 
     poll();
@@ -779,6 +824,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
   async function addTorrents(options: AddTorrentOptions) {
     const shouldPause = options.paused !== undefined ? options.paused : appStore.doNotStart;
     const shouldAddToTop = options.addToTopOfQueue !== undefined ? options.addToTopOfQueue : appStore.addToTopOfQueue;
+    const targetCategory = options.category !== undefined ? options.category : (appStore.defaultCategory || undefined);
 
     if (appStore.simulationMode) {
       let torrentName = 'Added Torrent';
@@ -810,7 +856,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
         uploadSpeed: shouldPause ? 0 : Math.floor((Math.random() * 500 + 100) * 1024),
         status: shouldPause ? 'paused' : 'downloading',
         eta: shouldPause ? 0 : Math.floor(Math.random() * 3600 + 120),
-        category: options.category || '',
+        category: targetCategory || '',
         ratio: 0,
       };
 
@@ -836,6 +882,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
       ...options,
       paused: shouldPause,
       addToTopOfQueue: shouldAddToTop,
+      category: targetCategory,
     };
     const success = await driver.addTorrents(finalOptions);
     if (success) {

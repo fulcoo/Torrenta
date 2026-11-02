@@ -18,6 +18,7 @@ describe('appStore', () => {
     expect(store.driverType).toBe('qbittorrent');
     expect(store.locale).toBe('en'); // Defaults to 'en' in non-zh test runner environment
     expect(store.categoryConfigs).toEqual([]);
+    expect(store.defaultCategory).toBe('');
     expect(store.simulationMode).toBe(false);
   });
 
@@ -72,6 +73,36 @@ describe('appStore', () => {
     // Remove category
     store.removeCategory('Movies');
     expect(store.categoryConfigs).toHaveLength(0);
+  });
+
+  it('should set and reset defaultCategory properly', () => {
+    const store = useAppStore();
+
+    store.addCategory('Movies');
+    store.addCategory('Music');
+    store.setDefaultCategory('Movies');
+
+    expect(store.defaultCategory).toBe('Movies');
+    expect(safeStorage.getItem('torrenta_default_category')).toBe('Movies');
+
+    // Removing a different category does not clear defaultCategory
+    store.removeCategory('Music');
+    expect(store.defaultCategory).toBe('Movies');
+
+    // Removing the default category resets it to empty string
+    store.removeCategory('Movies');
+    expect(store.defaultCategory).toBe('');
+    expect(safeStorage.getItem('torrenta_default_category')).toBe('');
+
+    // Re-add and test syncCategories clearing
+    store.addCategory('Books');
+    store.setDefaultCategory('Books');
+    expect(store.defaultCategory).toBe('Books');
+
+    // Sync categories without 'Books'
+    store.syncCategories(['Podcasts']);
+    expect(store.defaultCategory).toBe('');
+    expect(safeStorage.getItem('torrenta_default_category')).toBe('');
   });
 
   it('should add and remove paths inside category', () => {
@@ -158,6 +189,14 @@ describe('appStore', () => {
     expect(store.speedChartCollapsed).toBe(true);
     expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
 
+    expect(store.hideSpeedCard).toBe(false);
+    store.toggleHideSpeedCard();
+    expect(store.hideSpeedCard).toBe(true);
+    expect(safeStorage.getItem('torrenta_hide_speed_card')).toBe('true');
+    store.setHideSpeedCard(false);
+    expect(store.hideSpeedCard).toBe(false);
+    expect(safeStorage.getItem('torrenta_hide_speed_card')).toBe('false');
+
     expect(store.isSidebarCollapsed).toBe(false);
     store.toggleSidebarCollapse();
     expect(store.isSidebarCollapsed).toBe(true);
@@ -171,7 +210,7 @@ describe('appStore', () => {
     const store = useAppStore();
 
     const mockSettings = {
-      appearance: { theme: 'cyberpunk', locale: 'zh', speedChartCollapsed: true },
+      appearance: { theme: 'cyberpunk', locale: 'zh', speedChartCollapsed: true, hideSpeedCard: true },
       category_mapping: {
         categoryConfigs: [{ name: 'Movies', paths: ['/media/movies'] }],
       },
@@ -182,6 +221,7 @@ describe('appStore', () => {
         isCollapsed: true,
       },
       task_defaults: {
+        defaultCategory: 'Movies',
         autoTMM: false,
         downloadPath: '/data/downloads',
       },
@@ -198,11 +238,14 @@ describe('appStore', () => {
     expect(store.locale).toBe('zh');
     expect(store.speedChartCollapsed).toBe(true);
     expect(safeStorage.getItem('torrenta_speed_chart_collapsed')).toBe('true');
+    expect(store.hideSpeedCard).toBe(true);
+    expect(safeStorage.getItem('torrenta_hide_speed_card')).toBe('true');
     expect(store.isSidebarCollapsed).toBe(true);
     expect(safeStorage.getItem('torrenta_sidebar_collapsed_overall')).toBe('true');
     expect(store.categoryConfigs).toEqual([{ name: 'Movies', paths: ['/media/movies'] }]);
     expect(store.sidebarOrder).toEqual(['tag', 'category', 'status']);
     expect(store.sidebarHidden).toEqual(['savepath']);
+    expect(store.defaultCategory).toBe('Movies');
     expect(store.autoTMM).toBe(false);
     expect(store.downloadPath).toBe('/data/downloads');
   });

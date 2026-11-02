@@ -45,9 +45,11 @@ export const useAppStore = defineStore('appStore', () => {
     })
   );
   const speedChartCollapsed = ref(safeStorage.getItem('torrenta_speed_chart_collapsed') === 'true');
+  const hideSpeedCard = ref(safeStorage.getItem('torrenta_hide_speed_card') === 'true');
   const isSidebarCollapsed = ref(safeStorage.getItem('torrenta_sidebar_collapsed_overall') === 'true');
 
   // Default torrent add options
+  const defaultCategory = ref(safeStorage.getItem('torrenta_default_category') || '');
   const addToTopOfQueue = ref(safeStorage.getItem('torrenta_add_to_top_of_queue') === 'true');
   const doNotStart = ref(safeStorage.getItem('torrenta_do_not_start') === 'true');
   const mergeDuplicateTrackers = ref(safeStorage.getItem('torrenta_merge_duplicate_trackers') === 'true');
@@ -81,6 +83,7 @@ export const useAppStore = defineStore('appStore', () => {
           theme: theme.value,
           locale: locale.value,
           speedChartCollapsed: speedChartCollapsed.value,
+          hideSpeedCard: hideSpeedCard.value,
         },
         sidebar: {
           order: sidebarOrder.value,
@@ -92,6 +95,7 @@ export const useAppStore = defineStore('appStore', () => {
           categoryConfigs: categoryConfigs.value,
         },
         task_defaults: {
+          defaultCategory: defaultCategory.value,
           addToTopOfQueue: addToTopOfQueue.value,
           doNotStart: doNotStart.value,
           mergeDuplicateTrackers: mergeDuplicateTrackers.value,
@@ -155,6 +159,10 @@ export const useAppStore = defineStore('appStore', () => {
           speedChartCollapsed.value = data.appearance.speedChartCollapsed;
           safeStorage.setItem('torrenta_speed_chart_collapsed', String(data.appearance.speedChartCollapsed));
         }
+        if (typeof data.appearance.hideSpeedCard === 'boolean') {
+          hideSpeedCard.value = data.appearance.hideSpeedCard;
+          safeStorage.setItem('torrenta_hide_speed_card', String(data.appearance.hideSpeedCard));
+        }
       }
 
       // 2. Category mapping
@@ -186,6 +194,10 @@ export const useAppStore = defineStore('appStore', () => {
       // 4. Task defaults
       if (data.task_defaults) {
         const td = data.task_defaults;
+        if (typeof td.defaultCategory === 'string') {
+          defaultCategory.value = td.defaultCategory;
+          safeStorage.setItem('torrenta_default_category', td.defaultCategory);
+        }
         if (typeof td.addToTopOfQueue === 'boolean') {
           addToTopOfQueue.value = td.addToTopOfQueue;
           safeStorage.setItem('torrenta_add_to_top_of_queue', String(td.addToTopOfQueue));
@@ -304,6 +316,10 @@ export const useAppStore = defineStore('appStore', () => {
 
   function removeCategory(name: string) {
     categoryConfigs.value = categoryConfigs.value.filter((c) => c.name !== name);
+    if (defaultCategory.value === name) {
+      defaultCategory.value = '';
+      safeStorage.setItem('torrenta_default_category', '');
+    }
     saveCategoryConfigs();
   }
 
@@ -319,6 +335,12 @@ export const useAppStore = defineStore('appStore', () => {
     const beforeCount = categoryConfigs.value.length;
     categoryConfigs.value = categoryConfigs.value.filter((c) => serverNames.includes(c.name));
     if (categoryConfigs.value.length !== beforeCount) {
+      changed = true;
+    }
+
+    if (defaultCategory.value && !serverNames.includes(defaultCategory.value)) {
+      defaultCategory.value = '';
+      safeStorage.setItem('torrenta_default_category', '');
       changed = true;
     }
 
@@ -395,6 +417,16 @@ export const useAppStore = defineStore('appStore', () => {
     setSpeedChartCollapsed(!speedChartCollapsed.value);
   }
 
+  function setHideSpeedCard(val: boolean) {
+    hideSpeedCard.value = val;
+    safeStorage.setItem('torrenta_hide_speed_card', String(val));
+    scheduleServerSync();
+  }
+
+  function toggleHideSpeedCard() {
+    setHideSpeedCard(!hideSpeedCard.value);
+  }
+
   function setSimulationMode(enabled: boolean) {
     simulationMode.value = enabled;
     safeStorage.setItem('torrenta_simulation_mode', String(enabled));
@@ -403,6 +435,10 @@ export const useAppStore = defineStore('appStore', () => {
       categoryConfigs.value = categoryConfigs.value.filter(
         (c) => !(mockCats.includes(c.name) && c.paths.length === 0)
       );
+      if (defaultCategory.value && !categoryConfigs.value.some((c) => c.name === defaultCategory.value)) {
+        defaultCategory.value = '';
+        safeStorage.setItem('torrenta_default_category', '');
+      }
       saveCategoryConfigs();
     }
   }
@@ -410,6 +446,13 @@ export const useAppStore = defineStore('appStore', () => {
   function setSimulatedCount(count: number) {
     simulatedCount.value = count;
     safeStorage.setItem('torrenta_simulated_count', String(count));
+  }
+
+  function setDefaultCategory(val: string) {
+    const clean = val.trim();
+    defaultCategory.value = clean;
+    safeStorage.setItem('torrenta_default_category', clean);
+    scheduleServerSync();
   }
 
   function setAddToTopOfQueue(val: boolean) {
@@ -517,6 +560,7 @@ export const useAppStore = defineStore('appStore', () => {
     sidebarCollapsed,
     isSidebarCollapsed,
     speedChartCollapsed,
+    hideSpeedCard,
     setSidebarOrder,
     setSidebarHidden,
     setSidebarCollapsed,
@@ -525,6 +569,8 @@ export const useAppStore = defineStore('appStore', () => {
     toggleSidebarCollapse,
     setSpeedChartCollapsed,
     toggleSpeedChartCollapsed,
+    setHideSpeedCard,
+    toggleHideSpeedCard,
     loadServerSettings,
     persistSettingsToServer,
     scheduleServerSync,
@@ -538,6 +584,8 @@ export const useAppStore = defineStore('appStore', () => {
     syncCategories,
     addPathToCategory,
     removePathFromCategory,
+    defaultCategory,
+    setDefaultCategory,
     addToTopOfQueue,
     doNotStart,
     setAddToTopOfQueue,

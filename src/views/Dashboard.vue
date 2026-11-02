@@ -34,7 +34,7 @@
 
 
     <!-- Speed telemetry wavy area graph -->
-    <div class="w-full shrink-0 transition-all duration-300">
+    <div v-if="!appStore.hideSpeedCard" class="w-full shrink-0 transition-all duration-300">
       <SpeedChart />
     </div>
 
@@ -1415,25 +1415,25 @@ onUnmounted(() => {
 const addForm = reactive({
   urls: '',
   savepath: '',
-  category: '',
-  paused: false,
-  skip_checking: false,
-  autoTMM: false,
+  category: appStore.defaultCategory || '',
+  paused: appStore.doNotStart,
+  skip_checking: appStore.skipChecking,
+  autoTMM: appStore.autoTMM,
   sequentialDownload: false,
   firstLastAsStream: false,
-  addToTopOfQueue: false,
+  addToTopOfQueue: appStore.addToTopOfQueue,
   rename: '',
   tags: '',
-  contentLayout: 'Original',
-  stopCondition: 'None',
+  contentLayout: appStore.contentLayout || 'Original',
+  stopCondition: appStore.stopCondition || 'None',
   dlLimit: '',
   upLimit: '',
   ratioLimit: '',
   seedingTimeLimit: '',
   inactiveSeedingTimeLimit: '',
-  forced: false,
-  downloadPath: '',
-  useDownloadPath: false,
+  forced: appStore.forced,
+  downloadPath: appStore.downloadPath || '',
+  useDownloadPath: appStore.useDownloadPath,
 });
 
 const showAdvancedOptions = ref(false);
@@ -1523,26 +1523,31 @@ async function parseAndAddFile(file: File) {
 
 function openAddModal() {
   addForm.urls = '';
-  addForm.savepath = '';
-  addForm.category = '';
-  addForm.paused = false;
-  addForm.skip_checking = false;
-  addForm.autoTMM = false;
+  addForm.category = appStore.defaultCategory || '';
+  if (addForm.category) {
+    const cat = appStore.categoryConfigs.find((c) => c.name === addForm.category);
+    addForm.savepath = cat && cat.paths.length > 0 ? cat.paths[0] : '';
+  } else {
+    addForm.savepath = '';
+  }
+  addForm.paused = appStore.doNotStart;
+  addForm.skip_checking = appStore.skipChecking;
+  addForm.autoTMM = appStore.autoTMM;
   addForm.sequentialDownload = false;
   addForm.firstLastAsStream = false;
-  addForm.addToTopOfQueue = false;
+  addForm.addToTopOfQueue = appStore.addToTopOfQueue;
   addForm.rename = '';
   addForm.tags = '';
-  addForm.contentLayout = 'Original';
-  addForm.stopCondition = 'None';
+  addForm.contentLayout = appStore.contentLayout || 'Original';
+  addForm.stopCondition = appStore.stopCondition || 'None';
   addForm.dlLimit = '';
   addForm.upLimit = '';
   addForm.ratioLimit = '';
   addForm.seedingTimeLimit = '';
   addForm.inactiveSeedingTimeLimit = '';
-  addForm.forced = false;
-  addForm.downloadPath = '';
-  addForm.useDownloadPath = false;
+  addForm.forced = appStore.forced;
+  addForm.downloadPath = appStore.downloadPath || '';
+  addForm.useDownloadPath = appStore.useDownloadPath;
 
   selectedFiles.value = [];
   parsedTorrents.value = [];

@@ -1,13 +1,13 @@
 <template>
-  <div class="max-w-[1400px] mx-auto flex flex-col gap-6 p-4 sm:p-6 text-base-content h-full">
+  <div class="max-w-[1400px] mx-auto flex flex-col gap-3 sm:gap-6 p-2.5 sm:p-6 text-base-content h-full">
     <!-- Header -->
-    <div class="flex items-center justify-between border-b border-base-content/10 pb-4">
+    <div class="flex items-center justify-between border-b border-base-content/10 pb-3 sm:pb-4">
       <div>
-        <h1 class="text-2xl font-black tracking-tight">{{ t('settings.configSettings') }}</h1>
-        <p class="text-xs opacity-60 mt-1">{{ t('settings.configDesc') }}</p>
+        <h1 class="text-xl sm:text-2xl font-black tracking-tight">{{ t('settings.configSettings') }}</h1>
+        <p class="text-[11px] sm:text-xs opacity-60 mt-0.5 sm:mt-1">{{ t('settings.configDesc') }}</p>
       </div>
-      <a href="#/" class="btn btn-neutral btn-sm rounded-xl">
-        <ArrowLeftIcon class="h-4 w-4 mr-1" /> {{ t('common.back') }}
+      <a href="#/" class="btn btn-neutral btn-sm rounded-xl text-xs sm:text-sm">
+        <ArrowLeftIcon class="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" /> {{ t('common.back') }}
       </a>
     </div>
 
@@ -15,16 +15,16 @@
     <div 
       v-if="!torrentStore.isConnected" 
       @click="selectTab('connection')"
-      class="bg-warning/10 border border-warning/30 shadow-md rounded-2xl p-4 flex flex-row items-center justify-between gap-4 text-xs font-semibold cursor-pointer hover:bg-warning/20 transition-all duration-200 animate-fadeIn"
+      class="bg-warning/10 border border-warning/30 shadow-md rounded-2xl p-3 sm:p-4 flex flex-row items-center justify-between gap-3 text-xs font-semibold cursor-pointer hover:bg-warning/20 transition-all duration-200 animate-fadeIn"
     >
       <div class="flex items-center gap-3">
         <AlertTriangleIcon class="h-5 w-5 text-warning shrink-0 animate-pulse" />
         <div class="leading-snug text-left">
-          <span class="font-black text-amber-800 dark:text-warning block mb-0.5 text-sm">{{ t('settings.notConnectedWarningTitle') }}</span>
-          <span class="font-normal text-xs text-base-content/80 block mt-0.5">{{ t('settings.notConnectedWarningDesc') }}</span>
+          <span class="font-black text-amber-800 dark:text-warning block mb-0.5 text-xs sm:text-sm">{{ t('settings.notConnectedWarningTitle') }}</span>
+          <span class="font-normal text-[11px] sm:text-xs text-base-content/80 block mt-0.5">{{ t('settings.notConnectedWarningDesc') }}</span>
         </div>
       </div>
-      <button class="btn btn-warning btn-sm rounded-xl px-4 shadow-lg shadow-warning/25 font-bold shrink-0">
+      <button class="btn btn-warning btn-xs sm:btn-sm rounded-xl px-3 sm:px-4 shadow-lg shadow-warning/25 font-bold shrink-0">
         {{ t('settings.goToConnectionSettings') }}
       </button>
     </div>
@@ -45,7 +45,7 @@
     </div>
 
     <!-- Layout Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 items-start">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3.5 sm:gap-6 items-start">
       <!-- Left Navigation Menu (Desktop persistent sidebar, Mobile drawer overlay) -->
       <aside
         class="md:col-span-1 transition-all duration-300 md:flex flex-col gap-2 bg-base-100/50 p-3 rounded-2xl border border-base-content/10"
@@ -125,16 +125,16 @@
       </aside>
 
       <!-- Right Content Panels -->
-      <main class="md:col-span-4 flex flex-col gap-6">
+      <main class="md:col-span-4 flex flex-col gap-3.5 sm:gap-6">
         <!-- 1. General Panel (Language first, Theme second) -->
-        <div v-if="activeTab === 'general'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+        <div v-if="activeTab === 'general'" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn">
           <!-- UI Language Switcher -->
-          <div class="relative z-20 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-base-content/10">
-            <div class="flex flex-col gap-1">
-              <h2 class="text-base font-bold flex items-center gap-2">
-                <LanguagesIcon class="h-5 w-5 text-primary" /> {{ t('settings.languageTitle') }}
+          <div class="relative z-20 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3.5 sm:pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-0.5 sm:gap-1">
+              <h2 class="text-sm sm:text-base font-bold flex items-center gap-2">
+                <LanguagesIcon class="h-4 w-4 sm:h-5 sm:w-5 text-primary" /> {{ t('settings.languageTitle') }}
               </h2>
-              <span class="text-xs opacity-60">{{ t('settings.languageDesc') }}</span>
+              <span class="text-[11px] sm:text-xs opacity-60 leading-tight sm:leading-normal">{{ t('settings.languageDesc') }}</span>
             </div>
 
             <div class="relative w-full sm:max-w-xs shrink-0">
@@ -150,21 +150,21 @@
           </div>
 
           <!-- UI Theme Selector -->
-          <div class="relative z-10 text-left flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-base-content/10">
-            <div class="flex flex-col gap-1">
-              <h2 class="text-base font-bold flex items-center gap-2">
-                <PaletteIcon class="h-5 w-5 text-secondary" /> {{ t('settings.uiThemes') }}
+          <div class="relative z-10 text-left flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4 pb-3.5 sm:pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-0.5 sm:gap-1">
+              <h2 class="text-sm sm:text-base font-bold flex items-center gap-2">
+                <PaletteIcon class="h-4 w-4 sm:h-5 sm:w-5 text-secondary" /> {{ t('settings.uiThemes') }}
               </h2>
-              <span class="text-xs opacity-60">{{ t('settings.themeDesc') }}</span>
+              <span class="text-[11px] sm:text-xs opacity-60 leading-tight sm:leading-normal">{{ t('settings.themeDesc') }}</span>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
+            <div class="flex flex-row items-center gap-2.5 w-full md:w-auto shrink-0">
               <!-- Custom Styled Theme Dropdown (No Double Arrows) -->
-              <div class="relative w-full sm:w-44" ref="dropdownContainer">
+              <div class="relative flex-1 sm:w-44" ref="dropdownContainer">
                 <button 
                   type="button"
                   @click="toggleThemeDropdown"
-                  class="w-full bg-base-200 hover:bg-base-300/80 active:bg-base-300 border border-base-content/15 rounded-xl focus:outline-none flex items-center justify-between font-bold capitalize text-sm h-11 px-4 text-base-content text-left animate-fadeIn"
+                  class="w-full bg-base-200 hover:bg-base-300/80 active:bg-base-300 border border-base-content/15 rounded-xl focus:outline-none flex items-center justify-between font-bold capitalize text-sm h-11 px-3 sm:px-4 text-base-content text-left animate-fadeIn"
                   :class="isDropdownOpen ? 'border-primary/50 ring-1 ring-primary/20 bg-base-300' : ''"
                 >
                   <span class="truncate">{{ appStore.theme }}</span>
@@ -199,27 +199,46 @@
               </div>
 
               <!-- Swatch of current active theme -->
-              <div class="flex items-center gap-3 bg-base-200/50 px-4 py-2.5 rounded-xl border border-base-content/10 select-none w-full sm:w-auto justify-center">
-                <span class="text-xs font-semibold opacity-60">{{ t('settings.activeSwatch') }}</span>
-                <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 bg-base-200/50 px-3 py-2 rounded-xl border border-base-content/10 select-none shrink-0 justify-center h-11">
+                <span class="text-[11px] font-semibold opacity-60 hidden xs:inline">{{ t('settings.activeSwatch') }}</span>
+                <div class="flex items-center gap-1.5">
                   <div class="flex flex-col items-center gap-0.5">
-                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.primary }"></span>
-                    <span class="text-[8px] opacity-50 font-mono">Pri</span>
+                    <span class="h-3 w-3 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.primary }"></span>
+                    <span class="text-[7px] opacity-50 font-mono">Pri</span>
                   </div>
                   <div class="flex flex-col items-center gap-0.5">
-                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.secondary }"></span>
-                    <span class="text-[8px] opacity-50 font-mono">Sec</span>
+                    <span class="h-3 w-3 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.secondary }"></span>
+                    <span class="text-[7px] opacity-50 font-mono">Sec</span>
                   </div>
                   <div class="flex flex-col items-center gap-0.5">
-                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.accent }"></span>
-                    <span class="text-[8px] opacity-50 font-mono">Acc</span>
+                    <span class="h-3 w-3 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.accent }"></span>
+                    <span class="text-[7px] opacity-50 font-mono">Acc</span>
                   </div>
                   <div class="flex flex-col items-center gap-0.5">
-                    <span class="h-3.5 w-3.5 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.neutral }"></span>
-                    <span class="text-[8px] opacity-50 font-mono">Neu</span>
+                    <span class="h-3 w-3 rounded-full border border-base-content/10 shadow-sm" :style="{ backgroundColor: currentThemeColors.neutral }"></span>
+                    <span class="text-[7px] opacity-50 font-mono">Neu</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Hide Speed Card Option -->
+          <div class="relative z-10 text-left flex items-center justify-between gap-3 pb-3.5 sm:pb-6 border-b border-base-content/10">
+            <div class="flex flex-col gap-0.5 sm:gap-1 max-w-[80%]">
+              <h2 class="text-sm sm:text-base font-bold flex items-center gap-2">
+                <GaugeIcon class="h-4 w-4 sm:h-5 sm:w-5 text-primary" /> {{ t('settings.hideSpeedCard') }}
+              </h2>
+              <span class="text-[11px] sm:text-xs opacity-60 leading-tight sm:leading-normal">{{ t('settings.hideSpeedCardDesc') }}</span>
+            </div>
+
+            <div class="shrink-0 flex items-center">
+              <input 
+                type="checkbox" 
+                class="toggle toggle-primary toggle-sm sm:toggle-md cursor-pointer"
+                :checked="appStore.hideSpeedCard"
+                @change="appStore.toggleHideSpeedCard()"
+              />
             </div>
           </div>
 
@@ -287,9 +306,104 @@
         </div>
 
         <!-- 2. Download Panel -->
-        <div v-if="activeTab === 'download'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 animate-fadeIn flex flex-col gap-6">
+        <div v-if="activeTab === 'download'" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 animate-fadeIn flex flex-col gap-3.5 sm:gap-6">
+          <!-- Category & Save Paths section -->
+          <div class="relative text-left flex flex-col gap-4">
+            <div class="flex items-center justify-between">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-base font-bold flex items-center gap-2">
+                  <FolderIcon class="h-5 w-5 text-secondary" /> {{ t('settings.categoryPaths') }}
+                </h2>
+                <span class="text-xs opacity-60">{{ t('settings.categoryPathsDesc') }}</span>
+              </div>
+              <button 
+                type="button" 
+                @click="openCreateCategoryModal" 
+                class="btn btn-primary btn-sm btn-circle h-8 w-8 min-h-[32px] rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center" 
+                :title="t('settings.createCategory')"
+              >
+                <PlusIcon class="h-4 w-4" />
+              </button>
+            </div>
+
+            <!-- List of Categories with their paths -->
+            <div v-if="appStore.categoryConfigs.length > 0" class="flex flex-col gap-4 mt-1">
+              <div
+                v-for="cat in appStore.categoryConfigs"
+                :key="cat.name"
+                class="flex flex-col gap-3 p-4 bg-base-200/30 rounded-2xl border border-base-content/10"
+              >
+                <!-- Category Header -->
+                <div class="flex items-center justify-between border-b border-base-content/5 pb-2">
+                  <div class="flex items-center gap-2">
+                    <FolderOpenIcon class="h-5 w-5 text-secondary animate-pulse" />
+                    <span class="font-black text-sm tracking-wide">{{ cat.name }}</span>
+                    <span 
+                      v-if="appStore.defaultCategory === cat.name" 
+                      class="badge badge-primary badge-sm text-[10px] font-bold px-2 py-0.5 h-auto rounded-lg shadow-sm"
+                    >
+                      {{ t('settings.defaultBadge') }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <button 
+                      type="button" 
+                      @click="appStore.setDefaultCategory(appStore.defaultCategory === cat.name ? '' : cat.name)" 
+                      class="btn btn-ghost btn-xs rounded-xl px-2 h-7 font-bold flex items-center gap-1 transition-all"
+                      :class="appStore.defaultCategory === cat.name ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-base-content/60 hover:text-base-content hover:bg-base-content/10'"
+                      :title="appStore.defaultCategory === cat.name ? t('settings.cancelDefaultCategory') : t('settings.setAsDefaultCategory')"
+                    >
+                      <StarIcon class="h-3.5 w-3.5" :class="{ 'fill-primary': appStore.defaultCategory === cat.name }" />
+                      <span class="text-xs hidden sm:inline">{{ appStore.defaultCategory === cat.name ? t('settings.defaultBadge') : t('settings.setAsDefaultCategory') }}</span>
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="openAddPathModal(cat.name)" 
+                      class="btn btn-ghost btn-xs btn-circle text-secondary hover:bg-secondary/15 h-6 w-6" 
+                      :title="t('settings.addPathBtn')"
+                    >
+                      <PlusIcon class="h-3.5 w-3.5" />
+                    </button>
+                    <button 
+                      type="button" 
+                      @click="torrentStore.removeCategory(cat.name)" 
+                      class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6" 
+                      :title="t('settings.removeCategory')"
+                    >
+                      <TrashIcon class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Paths list for this category -->
+                <div class="flex flex-col gap-1.5 mt-0.5">
+                  <div v-if="cat.paths.length > 0" class="flex flex-col gap-1.5">
+                    <div
+                      v-for="path in cat.paths"
+                      :key="path"
+                      class="flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-lg border border-base-content/5 text-[11px] font-mono"
+                    >
+                      <span class="truncate pr-4">{{ path }}</span>
+                      <button type="button" @click="appStore.removePathFromCategory(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
+                        <XIcon class="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div v-else class="text-[11px] opacity-40 text-center py-2 bg-base-200/10 rounded-xl border border-dashed border-base-content/5">
+                    {{ t('settings.noPaths') }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-xs opacity-40 text-center py-8 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
+              {{ t('settings.noCategories') }}
+            </div>
+          </div>
+
+          <div class="h-px bg-base-content/10 w-full"></div>
+
           <!-- When adding torrent settings -->
-          <div class="relative text-left flex flex-col gap-3 pb-6 border-b border-base-content/10">
+          <div class="relative text-left flex flex-col gap-3">
             <div class="flex flex-col gap-1">
               <h2 class="text-base font-bold flex items-center gap-2">
                 <DownloadIcon class="h-5 w-5 text-primary" /> {{ t('settings.whenAddingTorrent') }}
@@ -298,6 +412,32 @@
             </div>
 
             <div class="flex flex-col gap-4 mt-2 bg-base-200/30 p-4 rounded-xl border border-base-content/5">
+              <!-- Default Category -->
+              <div class="form-control w-full">
+                <label class="label font-bold text-[10px] uppercase opacity-60 py-1">{{ t('settings.defaultCategory') }}</label>
+                <div class="flex items-center gap-2">
+                  <div class="grow">
+                    <CustomSelect 
+                      :modelValue="appStore.defaultCategory" 
+                      @update:modelValue="(val: any) => appStore.setDefaultCategory(val)"
+                      :options="defaultCategoryOptions" 
+                    />
+                  </div>
+                  <button 
+                    v-if="appStore.defaultCategory" 
+                    type="button" 
+                    @click="appStore.setDefaultCategory('')"
+                    class="btn btn-ghost btn-sm rounded-xl text-xs font-semibold px-2.5 hover:bg-base-content/10"
+                    :title="t('settings.clearDefaultCategory')"
+                  >
+                    <XIcon class="h-4 w-4" />
+                  </button>
+                </div>
+                <span class="text-[10px] opacity-50 mt-1">{{ t('settings.defaultCategoryDesc') }}</span>
+              </div>
+
+              <div class="h-px bg-base-content/5 my-1 w-full"></div>
+
               <!-- Add to top of queue -->
               <label class="flex items-start gap-3 cursor-pointer select-none">
                 <input
@@ -477,83 +617,6 @@
                   <span class="text-[10px] opacity-50">{{ t('settings.askBeforeMergeTrackersDesc') }}</span>
                 </div>
               </label>
-            </div>
-          </div>
-
-          <!-- Category & Save Paths section -->
-          <div class="relative text-left flex flex-col gap-4">
-            <div class="flex items-center justify-between">
-              <div class="flex flex-col gap-1">
-                <h2 class="text-base font-bold flex items-center gap-2">
-                  <FolderIcon class="h-5 w-5 text-secondary" /> {{ t('settings.categoryPaths') }}
-                </h2>
-                <span class="text-xs opacity-60">{{ t('settings.categoryPathsDesc') }}</span>
-              </div>
-              <button 
-                type="button" 
-                @click="openCreateCategoryModal" 
-                class="btn btn-primary btn-sm btn-circle h-8 w-8 min-h-[32px] rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center" 
-                :title="t('settings.createCategory')"
-              >
-                <PlusIcon class="h-4 w-4" />
-              </button>
-            </div>
-
-            <!-- List of Categories with their paths -->
-            <div v-if="appStore.categoryConfigs.length > 0" class="flex flex-col gap-4 mt-1">
-              <div
-                v-for="cat in appStore.categoryConfigs"
-                :key="cat.name"
-                class="flex flex-col gap-3 p-4 bg-base-200/30 rounded-2xl border border-base-content/10"
-              >
-                <!-- Category Header -->
-                <div class="flex items-center justify-between border-b border-base-content/5 pb-2">
-                  <div class="flex items-center gap-2">
-                    <FolderOpenIcon class="h-5 w-5 text-secondary animate-pulse" />
-                    <span class="font-black text-sm tracking-wide">{{ cat.name }}</span>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <button 
-                      type="button" 
-                      @click="openAddPathModal(cat.name)" 
-                      class="btn btn-ghost btn-xs btn-circle text-secondary hover:bg-secondary/15 h-6 w-6" 
-                      :title="t('settings.addPathBtn')"
-                    >
-                      <PlusIcon class="h-3.5 w-3.5" />
-                    </button>
-                    <button 
-                      type="button" 
-                      @click="torrentStore.removeCategory(cat.name)" 
-                      class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/15 h-6 w-6" 
-                      :title="t('settings.removeCategory')"
-                    >
-                      <TrashIcon class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Paths list for this category -->
-                <div class="flex flex-col gap-1.5 mt-0.5">
-                  <div v-if="cat.paths.length > 0" class="flex flex-col gap-1.5">
-                    <div
-                      v-for="path in cat.paths"
-                      :key="path"
-                      class="flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-lg border border-base-content/5 text-[11px] font-mono"
-                    >
-                      <span class="truncate pr-4">{{ path }}</span>
-                      <button type="button" @click="appStore.removePathFromCategory(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
-                        <XIcon class="h-3 w-3" />
-                      </button>
-                    </div>
-                  </div>
-                  <div v-else class="text-[11px] opacity-40 text-center py-2 bg-base-200/10 rounded-xl border border-dashed border-base-content/5">
-                    {{ t('settings.noPaths') }}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else class="text-xs opacity-40 text-center py-8 bg-base-200/20 rounded-2xl border border-dashed border-base-content/10">
-              {{ t('settings.noCategories') }}
             </div>
           </div>
 
@@ -943,7 +1006,7 @@
         </div>
 
         <!-- Speed & Scheduler Panel -->
-        <div v-if="activeTab === 'speed'" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+        <div v-if="activeTab === 'speed'" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn">
           <!-- Global & Alternative Speed Limits -->
           <div class="relative text-left flex flex-col gap-3">
             <div class="flex flex-col gap-1">
@@ -1324,7 +1387,7 @@
         <!-- 3. Connection Panel -->
         <div v-if="activeTab === 'connection'" class="flex flex-col gap-6">
           <!-- Local Connection Settings Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+          <div class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn">
             <!-- Connection Parameters -->
             <div class="text-left flex flex-col gap-4">
               <div class="flex flex-col gap-1">
@@ -1524,7 +1587,7 @@
           </div>
 
           <!-- Downloader Server Connection Performance Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+          <div class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn text-left relative">
             <!-- Loading overlay when updating preferences -->
             <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
               <div class="flex items-center gap-2 text-xs font-bold">
@@ -1916,7 +1979,7 @@
         <!-- 4. BitTorrent Panel -->
         <div v-if="activeTab === 'bittorrent'" class="flex flex-col gap-6">
           <!-- Privacy & Protocols Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+          <div class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn text-left relative">
             <!-- Loading overlay when updating preferences -->
             <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
               <div class="flex items-center gap-2 text-xs font-bold">
@@ -2028,7 +2091,7 @@
           </div>
 
           <!-- Queueing Settings Card -->
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn text-left relative">
+          <div class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn text-left relative">
             <!-- Loading overlay when updating preferences -->
             <div v-if="savingPrefs" class="absolute inset-0 bg-base-200/50 backdrop-blur-xs flex items-center justify-center rounded-2xl z-10">
               <div class="flex items-center gap-2 text-xs font-bold">
@@ -2211,7 +2274,7 @@
         </div>
 
         <!-- 5. Simulation Panel -->
-        <div v-if="activeTab === 'simulation' && isDev" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 text-left animate-fadeIn flex flex-col gap-4">
+        <div v-if="activeTab === 'simulation' && isDev" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 text-left animate-fadeIn flex flex-col gap-3 sm:gap-4">
           <div class="flex flex-col gap-1">
             <h2 class="text-base font-bold flex items-center gap-2">
               <CpuIcon class="h-5 w-5 text-primary" /> {{ t('settings.simulationTitle') }}
@@ -2280,7 +2343,7 @@
 
         <!-- 6. Security & Auth Panel -->
         <div v-if="activeTab === 'security'" class="flex flex-col gap-6">
-          <div class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-6 animate-fadeIn">
+          <div class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3.5 sm:gap-6 animate-fadeIn">
             <!-- Header -->
             <div class="flex items-center justify-between pb-4 border-b border-base-content/10">
               <div class="flex flex-col gap-1 text-left">
@@ -2423,7 +2486,7 @@
           </div>
 
           <!-- Session Info & Quick Lockout Card (Visible when active and authenticated) -->
-          <div v-if="authStore.authEnabled && authStore.isAuthenticated" class="card glassmorphic shadow-xl rounded-2xl border border-base-content/10 p-6 flex flex-col gap-4 text-left animate-fadeIn">
+          <div v-if="authStore.authEnabled && authStore.isAuthenticated" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4 text-left animate-fadeIn">
             <div class="flex flex-col gap-1 border-b border-base-content/10 pb-3">
               <h3 class="text-sm font-bold flex items-center gap-2">
                 <ClockIcon class="h-4 w-4 text-accent" />
@@ -2640,6 +2703,7 @@ import {
   LogOutIcon,
   ClockIcon,
   AlertCircleIcon,
+  StarIcon,
 } from 'lucide-vue-next';
 
 const appStore = useAppStore();
@@ -2670,6 +2734,11 @@ const autoDeleteModeOptions = computed(() => [
   { value: 0, label: t('dashboard.autoDeleteNever') },
   { value: 1, label: t('dashboard.autoDeleteIfAdded') },
   { value: 2, label: t('dashboard.autoDeleteAlways') },
+]);
+
+const defaultCategoryOptions = computed(() => [
+  { value: '', label: t('settings.defaultCategoryNone') },
+  ...appStore.categoryConfigs.map((c) => ({ value: c.name, label: c.name })),
 ]);
 
 const testStatus = ref<'idle' | 'testing' | 'success' | 'error'>('idle');
