@@ -85,6 +85,10 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       return {
         globalDownloadSpeed: state.dl_info_speed || 0,
         globalUploadSpeed: state.up_info_speed || 0,
+        dlInfoData: state.dl_info_data !== undefined ? state.dl_info_data : 0,
+        upInfoData: state.up_info_data !== undefined ? state.up_info_data : 0,
+        alltimeDl: state.alltime_dl !== undefined ? state.alltime_dl : undefined,
+        alltimeUl: state.alltime_ul !== undefined ? state.alltime_ul : undefined,
         freeSpaceOnDisk: state.free_space_on_disk || 0,
         allTorrentsCount:
           state.all_torrents_count !== undefined
@@ -99,6 +103,8 @@ export class QBittorrentAdapter implements DownloaderAdapter {
         return {
           globalDownloadSpeed: res.data?.dl_info_speed || 0,
           globalUploadSpeed: res.data?.up_info_speed || 0,
+          dlInfoData: res.data?.dl_info_data !== undefined ? res.data.dl_info_data : 0,
+          upInfoData: res.data?.up_info_data !== undefined ? res.data.up_info_data : 0,
           freeSpaceOnDisk: 0,
           allTorrentsCount: 0,
         };
@@ -107,6 +113,8 @@ export class QBittorrentAdapter implements DownloaderAdapter {
         return {
           globalDownloadSpeed: 0,
           globalUploadSpeed: 0,
+          dlInfoData: 0,
+          upInfoData: 0,
           freeSpaceOnDisk: 0,
           allTorrentsCount: 0,
         };

@@ -191,6 +191,12 @@ export const translations: Record<string, any> = {
       speedChart: {
         globalDl: '全局下行',
         globalUl: '全局上行',
+        downloaded: '已下载',
+        uploaded: '已上传',
+        sessionDownloaded: '本次已下载',
+        sessionUploaded: '本次已上传',
+        alltimeDownloaded: '累计已下载',
+        alltimeUploaded: '累计已上传',
         maxScale: '最大量程: {speed}',
       }
     },
@@ -761,6 +767,12 @@ export const translations: Record<string, any> = {
       speedChart: {
         globalDl: 'Global DL',
         globalUl: 'Global UL',
+        downloaded: 'Downloaded',
+        uploaded: 'Uploaded',
+        sessionDownloaded: 'Session Downloaded',
+        sessionUploaded: 'Session Uploaded',
+        alltimeDownloaded: 'All-Time Downloaded',
+        alltimeUploaded: 'All-Time Uploaded',
         maxScale: 'Max scale: {speed}',
       }
     },

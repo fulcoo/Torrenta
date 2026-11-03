@@ -137,6 +137,10 @@ describe('QBittorrentAdapter', () => {
         server_state: {
           dl_info_speed: 1000,
           up_info_speed: 500,
+          dl_info_data: 50000000,
+          up_info_data: 12000000,
+          alltime_dl: 900000000,
+          alltime_ul: 300000000,
           free_space_on_disk: 20000,
           all_torrents_count: 5,
         },
@@ -148,6 +152,10 @@ describe('QBittorrentAdapter', () => {
       expect(state).toEqual({
         globalDownloadSpeed: 1000,
         globalUploadSpeed: 500,
+        dlInfoData: 50000000,
+        upInfoData: 12000000,
+        alltimeDl: 900000000,
+        alltimeUl: 300000000,
         freeSpaceOnDisk: 20000,
         allTorrentsCount: 5,
       });
@@ -160,6 +168,8 @@ describe('QBittorrentAdapter', () => {
           data: {
             dl_info_speed: 1200,
             up_info_speed: 600,
+            dl_info_data: 1024000,
+            up_info_data: 512000,
           },
         }); // transfer/info success
 
@@ -167,6 +177,8 @@ describe('QBittorrentAdapter', () => {
       expect(state).toEqual({
         globalDownloadSpeed: 1200,
         globalUploadSpeed: 600,
+        dlInfoData: 1024000,
+        upInfoData: 512000,
         freeSpaceOnDisk: 0,
         allTorrentsCount: 0,
       });

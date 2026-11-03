@@ -28,6 +28,10 @@ export interface GlobalState {
   globalUploadSpeed: number;
   freeSpaceOnDisk: number;
   allTorrentsCount: number;
+  dlInfoData?: number;
+  upInfoData?: number;
+  alltimeDl?: number;
+  alltimeUl?: number;
 }
 
 export interface TorrentProperties {

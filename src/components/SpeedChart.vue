@@ -8,14 +8,20 @@
       class="flex items-center justify-between select-none cursor-pointer group"
       @click="toggleCollapse"
     >
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-4 sm:gap-6 flex-wrap">
         <!-- Download -->
         <div class="flex items-center gap-2">
           <div class="h-2 w-2 rounded-full bg-primary glow-primary"></div>
           <div>
             <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalDl') }}</div>
-            <div class="text-sm font-extrabold font-mono text-primary leading-tight">
-              {{ formatSpeed(torrentStore.globalState?.globalDownloadSpeed || 0) }}
+            <div class="text-sm font-extrabold font-mono text-primary leading-tight flex items-baseline gap-1.5 flex-wrap">
+              <span>{{ formatSpeed(torrentStore.globalState?.globalDownloadSpeed || 0) }}</span>
+              <span 
+                class="text-xs font-semibold font-mono text-base-content/75 bg-base-200/80 px-1.5 py-0.5 rounded cursor-help"
+                :title="dlTooltip"
+              >
+                ({{ formatSize(torrentStore.globalState?.dlInfoData || 0) }})
+              </span>
             </div>
           </div>
         </div>
@@ -25,8 +31,14 @@
           <div class="h-2 w-2 rounded-full bg-secondary glow-secondary"></div>
           <div>
             <div class="text-[10px] uppercase font-bold tracking-wider opacity-60">{{ t('dashboard.speedChart.globalUl') }}</div>
-            <div class="text-sm font-extrabold font-mono text-secondary leading-tight">
-              {{ formatSpeed(torrentStore.globalState?.globalUploadSpeed || 0) }}
+            <div class="text-sm font-extrabold font-mono text-secondary leading-tight flex items-baseline gap-1.5 flex-wrap">
+              <span>{{ formatSpeed(torrentStore.globalState?.globalUploadSpeed || 0) }}</span>
+              <span 
+                class="text-xs font-semibold font-mono text-base-content/75 bg-base-200/80 px-1.5 py-0.5 rounded cursor-help"
+                :title="ulTooltip"
+              >
+                ({{ formatSize(torrentStore.globalState?.upInfoData || 0) }})
+              </span>
             </div>
           </div>
         </div>
@@ -180,6 +192,36 @@ function formatSpeed(bytesPerSec: number): string {
   const i = Math.min(Math.floor(Math.log(bytesPerSec) / Math.log(k)), sizes.length - 1);
   return parseFloat((bytesPerSec / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
+
+// Format bytes into human readable file size
+function formatSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  if (bytes < 0 || !isFinite(bytes) || isNaN(bytes)) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+const dlTooltip = computed(() => {
+  const session = formatSize(torrentStore.globalState?.dlInfoData || 0);
+  const alltime = torrentStore.globalState?.alltimeDl !== undefined
+    ? formatSize(torrentStore.globalState.alltimeDl)
+    : null;
+  return alltime
+    ? `${t('dashboard.speedChart.sessionDownloaded')}: ${session} (${t('dashboard.speedChart.alltimeDownloaded')}: ${alltime})`
+    : `${t('dashboard.speedChart.downloaded')}: ${session}`;
+});
+
+const ulTooltip = computed(() => {
+  const session = formatSize(torrentStore.globalState?.upInfoData || 0);
+  const alltime = torrentStore.globalState?.alltimeUl !== undefined
+    ? formatSize(torrentStore.globalState.alltimeUl)
+    : null;
+  return alltime
+    ? `${t('dashboard.speedChart.sessionUploaded')}: ${session} (${t('dashboard.speedChart.alltimeUploaded')}: ${alltime})`
+    : `${t('dashboard.speedChart.uploaded')}: ${session}`;
+});
 
 // Compute coordinates for drawing
 const dlCoordinates = computed(() => {

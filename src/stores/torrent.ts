@@ -528,12 +528,17 @@ export const useTorrentStore = defineStore('torrentStore', () => {
           // Free space starting at 1.2TB and declining slightly
           const initialFree = 1200 * 1024 * 1024 * 1024;
           const totalDownloaded = simulatedTorrents.value.reduce((acc, t) => acc + (t.size * (t.progress / 100)), 0);
+          const totalUploaded = simulatedTorrents.value.reduce((acc, t) => acc + (t.uploaded || 0), 0);
           const currentFree = Math.max(10 * 1024 * 1024 * 1024, initialFree - totalDownloaded);
 
           torrents.value = [...simulatedTorrents.value];
           globalState.value = {
             globalDownloadSpeed: totalDL,
             globalUploadSpeed: totalUL,
+            dlInfoData: totalDownloaded,
+            upInfoData: totalUploaded,
+            alltimeDl: totalDownloaded,
+            alltimeUl: totalUploaded,
             freeSpaceOnDisk: currentFree,
             allTorrentsCount: simulatedTorrents.value.length,
           };
