@@ -497,7 +497,16 @@ def main():
 APP_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")/.." && pwd)"
 TARGET_DIR="${{TRIM_APPDEST:-${{APP_DIR}}/target}}"
 
-# 初始化日志与运行时路径 (优先使用飞牛应用持久化目录 TRIM_PKGVAR，如 /vol1/@appdata/torrenta)
+# 智能推断飞牛应用持久化目录 TRIM_PKGVAR 与 DATA_DIR
+if [ -z "${{TRIM_PKGVAR}}" ]; then
+    if [ -d "/var/apps/torrenta/var" ]; then
+        TRIM_PKGVAR="/var/apps/torrenta/var"
+    elif [ -d "${{APP_DIR}}/../var" ]; then
+        TRIM_PKGVAR="$(cd "${{APP_DIR}}/../var" 2>/dev/null && pwd || true)"
+    fi
+fi
+
+# 初始化日志与运行时路径 (优先使用飞牛应用持久化目录 TRIM_PKGVAR，如 /vol1/@appdata/torrenta 或 /var/apps/torrenta/var)
 if [ -n "${{TRIM_PKGVAR}}" ]; then
     mkdir -p "${{TRIM_PKGVAR}}" 2>/dev/null || true
     LOG_FILE="${{TRIM_PKGVAR}}/info.log"
@@ -647,6 +656,13 @@ start_process() {{
     export QBITTORRENT_PORT="${{QBITTORRENT_PORT:-{DEFAULT_QB_PORT}}}"
     export WEB_ROOT="${{web_root}}"
     export TRIM_APPDEST="${{TARGET_DIR}}"
+    if [ -n "${{TRIM_PKGVAR}}" ]; then
+        export TRIM_PKGVAR="${{TRIM_PKGVAR}}"
+        export DATA_DIR="${{DATA_DIR:-${{TRIM_PKGVAR}}}}"
+    elif [ -d "/var/apps/torrenta/var" ]; then
+        export TRIM_PKGVAR="/var/apps/torrenta/var"
+        export DATA_DIR="/var/apps/torrenta/var"
+    fi
 
     log_msg "Discovered Target Dir: ${{TARGET_DIR}}"
     log_msg "Discovered Web Root: ${{web_root}}"
@@ -742,6 +758,14 @@ esac
 APP_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")/.." && pwd)"
 TARGET_DIR="${{TRIM_APPDEST:-${{APP_DIR}}/target}}"
 
+if [ -z "${{TRIM_PKGVAR}}" ]; then
+    if [ -d "/var/apps/torrenta/var" ]; then
+        TRIM_PKGVAR="/var/apps/torrenta/var"
+    elif [ -d "${{APP_DIR}}/../var" ]; then
+        TRIM_PKGVAR="$(cd "${{APP_DIR}}/../var" 2>/dev/null && pwd || true)"
+    fi
+fi
+
 if [ -n "${{TRIM_PKGVAR}}" ]; then
     mkdir -p "${{TRIM_PKGVAR}}" 2>/dev/null || true
     ENV_FILE="${{TRIM_PKGVAR}}/torrenta.env"
@@ -759,7 +783,22 @@ SERVICE_PORT=${{USER_TORRENTA_PORT}}
 QBITTORRENT_PORT=${{USER_QB_PORT}}
 QBITTORRENT_URL=http://127.0.0.1:${{USER_QB_PORT}}
 QBITTORRENT_HOST=127.0.0.1:${{USER_QB_PORT}}
+TRIM_PKGVAR=${{TRIM_PKGVAR}}
+DATA_DIR=${{TRIM_PKGVAR}}
 EOF
+
+# 自动跨版本迁移保留用户的个性化设置文件 (user_settings*.json)
+if [ -n "${{TRIM_PKGVAR}}" ] && [ -d "${{TRIM_PKGVAR}}" ]; then
+    for old_cand in "${{TARGET_DIR}}/var" "${{TARGET_DIR}}/data" "${{APP_DIR}}/var" "${{APP_DIR}}/data"; do
+        if [ -d "$old_cand" ]; then
+            for old_json in "$old_cand"/user_settings*.json; do
+                if [ -f "$old_json" ] && [ ! -f "${{TRIM_PKGVAR}}/$(basename "$old_json")" ]; then
+                    cp -f "$old_json" "${{TRIM_PKGVAR}}/" 2>/dev/null || true
+                fi
+            done
+        fi
+    done
+fi
 
 # 同时同步写入 TARGET_DIR 和 APP_DIR 下作为备份
 cp -f "${{ENV_FILE}}" "${{TARGET_DIR}}/torrenta.env" 2>/dev/null || true

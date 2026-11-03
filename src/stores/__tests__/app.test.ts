@@ -249,5 +249,33 @@ describe('appStore', () => {
     expect(store.autoTMM).toBe(false);
     expect(store.downloadPath).toBe('/data/downloads');
   });
+
+  it('should sync categories with qBittorrent savePath object map and preserve paths', () => {
+    const store = useAppStore();
+
+    // 1. Initial category with existing local path
+    store.addCategory('Movies');
+    store.addPathToCategory('Movies', '/custom/path');
+
+    // 2. Sync with qBittorrent category dictionary containing savePath
+    store.syncCategories({
+      Movies: { name: 'Movies', savePath: '/downloads/movies' },
+      Music: { name: 'Music', savePath: '/downloads/music' },
+      EmptyPathCat: { name: 'EmptyPathCat', savePath: '' },
+    });
+
+    const moviesCat = store.categoryConfigs.find((c) => c.name === 'Movies');
+    expect(moviesCat).toBeDefined();
+    expect(moviesCat?.paths).toContain('/downloads/movies');
+    expect(moviesCat?.paths).toContain('/custom/path');
+
+    const musicCat = store.categoryConfigs.find((c) => c.name === 'Music');
+    expect(musicCat).toBeDefined();
+    expect(musicCat?.paths).toEqual(['/downloads/music']);
+
+    const emptyCat = store.categoryConfigs.find((c) => c.name === 'EmptyPathCat');
+    expect(emptyCat).toBeDefined();
+    expect(emptyCat?.paths).toEqual([]);
+  });
 });
 

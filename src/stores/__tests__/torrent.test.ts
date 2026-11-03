@@ -127,4 +127,49 @@ describe('torrentStore', () => {
 
     expect(store.torrents[0].category).toBe('DefaultMovies');
   });
+
+  it('should support createCategory with savePath and editCategory', async () => {
+    const appStore = useAppStore();
+    appStore.setSimulationMode(true);
+
+    const store = useTorrentStore();
+    const created = await store.createCategory('Anime', '/downloads/anime');
+    expect(created).toBe(true);
+
+    const cat = appStore.categoryConfigs.find((c) => c.name === 'Anime');
+    expect(cat).toBeDefined();
+    expect(cat?.paths).toContain('/downloads/anime');
+
+    const edited = await store.editCategory('Anime', '/downloads/anime_new');
+    expect(edited).toBe(true);
+  });
+
+  it('should save trackers in simulation mode for single and multiple torrents', async () => {
+    const appStore = useAppStore();
+    appStore.setSimulationMode(true);
+    appStore.setSimulatedCount(2);
+
+    const store = useTorrentStore();
+    await store.bootClient();
+
+    const ids = store.torrents.map((t) => t.id);
+    expect(ids.length).toBeGreaterThanOrEqual(2);
+
+    // Single torrent overwrite
+    const singleSuccess = await store.saveTorrentTrackers([ids[0]], [
+      { url: 'http://tracker1.com/announce', tier: 0 },
+      { url: 'http://tracker2.com/announce', tier: 1 },
+    ]);
+    expect(singleSuccess).toBe(true);
+    const trackersSingle = await store.getTorrentTrackers(ids[0]);
+    expect(trackersSingle).toHaveLength(2);
+
+    // Multi torrent append
+    const multiSuccess = await store.saveTorrentTrackers(
+      [ids[0], ids[1]],
+      [{ url: 'http://tracker3.com/announce', tier: 0 }],
+      'append'
+    );
+    expect(multiSuccess).toBe(true);
+  });
 });

@@ -320,7 +320,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hashes', hashes);
       params.append('value', 'true');
       const res = await api.post('/torrents/setForceStart', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to force start torrents:', err);
       return false;
@@ -335,7 +335,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hashes', hashes);
       params.append('location', location);
       const res = await api.post('/torrents/setLocation', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to set location for torrents:', err);
       return false;
@@ -352,7 +352,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const res = await api.post('/torrents/setCategory', params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to set category for torrents:', err);
       return false;
@@ -365,7 +365,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hash', id);
       params.append('name', name);
       const res = await api.post('/torrents/rename', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to rename torrent:', err);
       return false;
@@ -379,7 +379,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hashes', ids.join('|'));
       params.append('tags', tags.join(','));
       const res = await api.post('/torrents/addTags', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to add tags to torrents:', err);
       return false;
@@ -393,7 +393,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hashes', ids.join('|'));
       params.append('tags', tags.join(','));
       const res = await api.post('/torrents/removeTags', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to remove tags from torrents:', err);
       return false;
@@ -407,7 +407,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       params.append('hashes', ids.join('|'));
       params.append('tags', tags.join(','));
       const res = await api.post('/torrents/setTags', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to set tags for torrents:', err);
       return false;
@@ -430,7 +430,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const params = new URLSearchParams();
       params.append('tags', tags.join(','));
       const res = await api.post('/torrents/createTags', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to create tags in qBittorrent:', err);
       return false;
@@ -443,7 +443,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const params = new URLSearchParams();
       params.append('tags', tags.join(','));
       const res = await api.post('/torrents/deleteTags', params);
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error('Failed to delete tags in qBittorrent:', err);
       return false;
@@ -475,7 +475,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const res = await api.post('/torrents/removeTrackers', params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error(`Failed to remove trackers from torrent ${id}:`, err);
       return false;
@@ -491,7 +491,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const res = await api.post('/torrents/addTrackers', params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error(`Failed to add trackers to torrent ${id}:`, err);
       return false;
@@ -508,7 +508,7 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       const res = await api.post('/torrents/editTracker', params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
-      return res.status === 200;
+      return res.status >= 200 && res.status < 300;
     } catch (err) {
       console.error(`Failed to edit tracker tier for torrent ${id} and url ${url}:`, err);
       return false;
@@ -565,6 +565,21 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       return true;
     } catch (err) {
       console.error(`Failed to create category ${name}:`, err);
+      return false;
+    }
+  }
+
+  async editCategory(name: string, savePath: string): Promise<boolean> {
+    try {
+      const params = new URLSearchParams();
+      params.append('category', name);
+      params.append('savePath', savePath);
+      await api.post('/torrents/editCategory', params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      return true;
+    } catch (err) {
+      console.error(`Failed to edit category ${name}:`, err);
       return false;
     }
   }

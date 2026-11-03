@@ -262,16 +262,31 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     if (!cleanName) return false;
 
     if (appStore.simulationMode) {
-      appStore.addCategory(cleanName);
+      appStore.addCategory(cleanName, savePath);
       return true;
     }
 
     if (!driver) return false;
     const success = await driver.createCategory(cleanName, savePath);
     if (success) {
-      appStore.addCategory(cleanName);
+      appStore.addCategory(cleanName, savePath);
     }
     return success;
+  }
+
+  async function editCategory(name: string, savePath: string): Promise<boolean> {
+    const cleanName = name.trim();
+    if (!cleanName) return false;
+
+    if (appStore.simulationMode) {
+      return true;
+    }
+
+    if (!driver) return false;
+    if ('editCategory' in driver && typeof (driver as any).editCategory === 'function') {
+      return await (driver as any).editCategory(cleanName, savePath);
+    }
+    return false;
   }
 
   async function removeCategory(name: string): Promise<boolean> {
@@ -557,7 +572,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
 
           // Reconcile categories from the server with appStore
           if (rawCategories) {
-            appStore.syncCategories(Object.keys(rawCategories));
+            appStore.syncCategories(rawCategories);
           }
 
           const now = Date.now();
@@ -1465,6 +1480,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     addCustomCategory,
     removeCustomCategory,
     createCategory,
+    editCategory,
     removeCategory,
     addCustomTag,
     removeCustomTag,

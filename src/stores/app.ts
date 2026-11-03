@@ -167,8 +167,25 @@ export const useAppStore = defineStore('appStore', () => {
 
       // 2. Category mapping
       if (data.category_mapping?.categoryConfigs && Array.isArray(data.category_mapping.categoryConfigs)) {
-        categoryConfigs.value = data.category_mapping.categoryConfigs;
-        safeStorage.setJSON('torrenta_category_configs', data.category_mapping.categoryConfigs);
+        const serverConfigs: CategoryConfig[] = data.category_mapping.categoryConfigs;
+        // Merge with existing category configs so paths aren't wiped
+        const merged: CategoryConfig[] = [...categoryConfigs.value];
+        serverConfigs.forEach((sc) => {
+          const found = merged.find((c) => c.name === sc.name);
+          if (!found) {
+            merged.push({ name: sc.name, paths: Array.isArray(sc.paths) ? [...sc.paths] : [] });
+          } else {
+            if (Array.isArray(sc.paths)) {
+              sc.paths.forEach((p) => {
+                if (p && !found.paths.includes(p)) {
+                  found.paths.push(p);
+                }
+              });
+            }
+          }
+        });
+        categoryConfigs.value = merged;
+        safeStorage.setJSON('torrenta_category_configs', merged);
       }
 
       // 3. Sidebar
@@ -306,10 +323,16 @@ export const useAppStore = defineStore('appStore', () => {
     scheduleServerSync();
   }
 
-  function addCategory(name: string) {
+  function addCategory(name: string, defaultPath?: string) {
     const clean = name.trim();
-    if (clean && !categoryConfigs.value.some((c) => c.name === clean)) {
-      categoryConfigs.value.push({ name: clean, paths: [] });
+    if (!clean) return;
+    const cat = categoryConfigs.value.find((c) => c.name === clean);
+    if (!cat) {
+      const paths = defaultPath && defaultPath.trim() ? [defaultPath.trim()] : [];
+      categoryConfigs.value.push({ name: clean, paths });
+      saveCategoryConfigs();
+    } else if (defaultPath && defaultPath.trim() && !cat.paths.includes(defaultPath.trim())) {
+      cat.paths.push(defaultPath.trim());
       saveCategoryConfigs();
     }
   }
@@ -323,12 +346,38 @@ export const useAppStore = defineStore('appStore', () => {
     saveCategoryConfigs();
   }
 
-  function syncCategories(serverNames: string[]) {
+  function syncCategories(serverCategories: string[] | Record<string, any>) {
     let changed = false;
+    const serverMap: Record<string, string> = {};
+    const serverNames: string[] = [];
+
+    if (Array.isArray(serverCategories)) {
+      serverCategories.forEach((name) => {
+        if (typeof name === 'string') {
+          serverNames.push(name);
+          serverMap[name] = '';
+        }
+      });
+    } else if (serverCategories && typeof serverCategories === 'object') {
+      Object.keys(serverCategories).forEach((key) => {
+        serverNames.push(key);
+        const item = serverCategories[key];
+        serverMap[key] = (item && typeof item === 'object' && item.savePath) ? String(item.savePath).trim() : '';
+      });
+    }
+
     serverNames.forEach((name) => {
-      if (!categoryConfigs.value.some((c) => c.name === name)) {
-        categoryConfigs.value.push({ name, paths: [] });
+      const existing = categoryConfigs.value.find((c) => c.name === name);
+      const serverSavePath = serverMap[name];
+      if (!existing) {
+        const initialPaths = serverSavePath ? [serverSavePath] : [];
+        categoryConfigs.value.push({ name, paths: initialPaths });
         changed = true;
+      } else if (serverSavePath) {
+        if (!existing.paths.includes(serverSavePath)) {
+          existing.paths.unshift(serverSavePath);
+          changed = true;
+        }
       }
     });
 
@@ -533,10 +582,13 @@ export const useAppStore = defineStore('appStore', () => {
   // Clean up mock categories on boot if simulation mode is disabled
   if (!simulationMode.value) {
     const mockCats = ['Movies', 'Music', 'Software', 'Books'];
+    const beforeCount = categoryConfigs.value.length;
     categoryConfigs.value = categoryConfigs.value.filter(
       (c) => !(mockCats.includes(c.name) && c.paths.length === 0)
     );
-    saveCategoryConfigs();
+    if (categoryConfigs.value.length !== beforeCount) {
+      saveCategoryConfigs();
+    }
   }
 
   // Hydrate persistent settings from server on boot

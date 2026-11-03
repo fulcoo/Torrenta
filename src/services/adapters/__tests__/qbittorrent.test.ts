@@ -356,6 +356,18 @@ describe('QBittorrentAdapter', () => {
       expect(calledParams.get('savePath')).toBe('/downloads/movies');
     });
 
+    it('should edit category savePath successfully', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
+
+      const success = await adapter.editCategory('Movies', '/downloads/new_movies');
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/editCategory', expect.any(URLSearchParams), expect.any(Object));
+
+      const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
+      expect(calledParams.get('category')).toBe('Movies');
+      expect(calledParams.get('savePath')).toBe('/downloads/new_movies');
+    });
+
     it('should remove categories successfully', async () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: 'Ok.' });
 
@@ -377,6 +389,40 @@ describe('QBittorrentAdapter', () => {
       const calledParams = vi.mocked(api.post).mock.calls[0][1] as URLSearchParams;
       expect(calledParams.get('hashes')).toBe('hash1|hash2');
       expect(calledParams.get('category')).toBe('Movies');
+    });
+  });
+
+  describe('trackers', () => {
+    it('should return true when addTorrentTrackers receives 200 or 204 No Content', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 204 } as any);
+
+      const success = await adapter.addTorrentTrackers('hash1', 'http://tracker1.com/announce');
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/addTrackers', expect.any(URLSearchParams), expect.any(Object));
+
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 200 } as any);
+      const success200 = await adapter.addTorrentTrackers('hash1', 'http://tracker2.com/announce');
+      expect(success200).toBe(true);
+    });
+
+    it('should return true when removeTorrentTrackers receives 200 or 204 No Content', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 204 } as any);
+
+      const success = await adapter.removeTorrentTrackers('hash1', ['http://tracker1.com/announce']);
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/removeTrackers', expect.any(URLSearchParams), expect.any(Object));
+
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 200 } as any);
+      const success200 = await adapter.removeTorrentTrackers('hash1', ['http://tracker2.com/announce']);
+      expect(success200).toBe(true);
+    });
+
+    it('should return true when editTorrentTrackerTier receives 200 or 204 No Content', async () => {
+      vi.mocked(api.post).mockResolvedValueOnce({ status: 204 } as any);
+
+      const success = await adapter.editTorrentTrackerTier('hash1', 'http://tracker1.com/announce', 1);
+      expect(success).toBe(true);
+      expect(api.post).toHaveBeenCalledWith('/torrents/editTracker', expect.any(URLSearchParams), expect.any(Object));
     });
   });
 });

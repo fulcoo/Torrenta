@@ -384,7 +384,7 @@
                       class="flex items-center justify-between px-3 py-2 bg-base-300/40 rounded-lg border border-base-content/5 text-[11px] font-mono"
                     >
                       <span class="truncate pr-4">{{ path }}</span>
-                      <button type="button" @click="appStore.removePathFromCategory(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
+                      <button type="button" @click="removeCategoryPath(cat.name, path)" class="btn btn-ghost btn-xs btn-circle text-error hover:bg-error/10 h-5 w-5 min-h-[20px]">
                         <XIcon class="h-3 w-3" />
                       </button>
                     </div>
@@ -3260,7 +3260,7 @@ function switchToDropdown() {
   }
 }
 
-function submitAddPath() {
+async function submitAddPath() {
   let targetPath = '';
   if (torrentStore.torrentSavePaths.length === 0 || isManualPathInput.value || selectedPathOption.value === '__custom__') {
     targetPath = manualPathInput.value.trim();
@@ -3270,8 +3270,19 @@ function submitAddPath() {
 
   if (targetPath && activeCategoryForPath.value) {
     appStore.addPathToCategory(activeCategoryForPath.value, targetPath);
+    const cat = appStore.categoryConfigs.find((c) => c.name === activeCategoryForPath.value);
+    if (cat && cat.paths.length > 0) {
+      await torrentStore.editCategory(activeCategoryForPath.value, cat.paths[0]);
+    }
   }
   showAddPathModal.value = false;
+}
+
+async function removeCategoryPath(catName: string, path: string) {
+  appStore.removePathFromCategory(catName, path);
+  const cat = appStore.categoryConfigs.find((c) => c.name === catName);
+  const nextPath = cat && cat.paths.length > 0 ? cat.paths[0] : '';
+  await torrentStore.editCategory(catName, nextPath);
 }
 
 const newWatchPath = ref('');

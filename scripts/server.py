@@ -61,7 +61,11 @@ def load_env_file():
         os.path.join(os.environ.get('TRIM_PKGETC', ''), 'torrenta.env'),
         os.path.join(os.environ.get('TRIM_APPDEST', ''), 'torrenta.env'),
         os.path.join(APP_DIR, 'torrenta.env'),
-        os.path.join(APP_DIR, '..', 'torrenta.env')
+        os.path.join(APP_DIR, '..', 'torrenta.env'),
+        os.path.join(APP_DIR, '..', 'var', 'torrenta.env'),
+        os.path.join(APP_DIR, '..', 'etc', 'torrenta.env'),
+        '/var/apps/torrenta/var/torrenta.env',
+        '/var/apps/torrenta/etc/torrenta.env',
     ]
     for env_path in candidates:
         if env_path and os.path.isfile(env_path):
@@ -121,40 +125,94 @@ def find_web_root():
 WEB_ROOT = find_web_root()
 
 def find_data_dir():
-    """Resolve persistent data directory for fnOS, Docker, or local environments"""
-    # 1. 飞牛私有云官方持久化数据目录
-    if os.environ.get('TRIM_PKGVAR'):
+    """Resolve persistent data directory across version updates for fnOS, Docker, or local environments"""
+    import glob
+    import shutil
+
+    def is_writable(path):
+        if not path:
+            return False
         try:
-            os.makedirs(os.environ.get('TRIM_PKGVAR'), exist_ok=True)
-            return os.environ.get('TRIM_PKGVAR')
-        except:
+            os.makedirs(path, exist_ok=True)
+            test_file = os.path.join(path, '.perm_test')
+            with open(test_file, 'w', encoding='utf-8') as f:
+                f.write('1')
+            os.remove(test_file)
+            return True
+        except Exception:
+            return False
+
+    resolved_dir = None
+
+    # 1. 飞牛私有云官方持久化数据目录 / 显式 DATA_DIR 环境变量
+    for env_var in ('TRIM_PKGVAR', 'DATA_DIR'):
+        val = os.environ.get(env_var)
+        if val and is_writable(val):
+            resolved_dir = os.path.abspath(val)
+            break
+
+    # 2. 飞牛私有云 (fnOS) 常见原生持久化路径
+    if not resolved_dir:
+        fnos_candidates = [
+            os.path.join(APP_DIR, '..', 'var'),           # /var/apps/torrenta/var
+            os.path.join(APP_DIR, '..', 'etc'),           # /var/apps/torrenta/etc
+            '/var/apps/torrenta/var',
+            '/var/apps/torrenta/etc',
+        ]
+        # 匹配飞牛存储卷下的 @appdata
+        try:
+            fnos_candidates.extend(glob.glob('/vol*/@appdata/torrenta'))
+        except Exception:
             pass
 
-    # 2. Docker / 外部指定数据目录
-    if os.environ.get('DATA_DIR'):
-        try:
-            os.makedirs(os.environ.get('DATA_DIR'), exist_ok=True)
-            return os.environ.get('DATA_DIR')
-        except:
-            pass
+        for p in fnos_candidates:
+            if is_writable(p):
+                resolved_dir = os.path.abspath(p)
+                break
 
-    # 3. 容器内默认 /data 挂载点
-    if os.path.exists('/data') or (sys.platform != 'win32' and os.path.isdir('/')):
-        try:
-            os.makedirs('/data', exist_ok=True)
-            return '/data'
-        except:
-            pass
+    # 3. Docker 容器内 /data 挂载点
+    if not resolved_dir:
+        if os.path.exists('/data') and is_writable('/data'):
+            resolved_dir = '/data'
 
-    # 4. 回退到本地 data 或 var 目录
-    for sub in ('data', 'var'):
-        d = os.path.join(APP_DIR, sub)
-        try:
-            os.makedirs(d, exist_ok=True)
-            return d
-        except:
-            pass
-    return APP_DIR
+    # 4. 回退到持久化目录 (优先检查 target 的父级 var 避免升级被覆盖)
+    if not resolved_dir:
+        candidates = []
+        if os.path.basename(APP_DIR) in ('target', 'app', 'ui'):
+            candidates.append(os.path.join(APP_DIR, '..', 'var'))
+            candidates.append(os.path.join(APP_DIR, '..', 'data'))
+        candidates.extend([os.path.join(APP_DIR, 'var'), os.path.join(APP_DIR, 'data'), APP_DIR])
+        for c in candidates:
+            if is_writable(c):
+                resolved_dir = os.path.abspath(c)
+                break
+
+    if not resolved_dir:
+        resolved_dir = APP_DIR
+
+    # 5. 自动无损迁移旧版本配置（若目标目录不存在配置，尝试从历史临时目录迁移）
+    try:
+        primary_settings = os.path.join(resolved_dir, "user_settings.json")
+        if not os.path.isfile(primary_settings):
+            history_dirs = [
+                os.path.join(APP_DIR, 'var'),
+                os.path.join(APP_DIR, 'data'),
+                os.path.join(APP_DIR, '..', 'target', 'var'),
+                '/data',
+                APP_DIR
+            ]
+            for h_dir in history_dirs:
+                if h_dir and os.path.abspath(h_dir) != resolved_dir and os.path.isdir(h_dir):
+                    for fname in os.listdir(h_dir):
+                        if fname.startswith("user_settings") and fname.endswith(".json"):
+                            src_f = os.path.join(h_dir, fname)
+                            dst_f = os.path.join(resolved_dir, fname)
+                            if os.path.isfile(src_f) and not os.path.exists(dst_f):
+                                shutil.copy2(src_f, dst_f)
+    except Exception:
+        pass
+
+    return resolved_dir
 
 DATA_DIR = find_data_dir()
 

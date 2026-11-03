@@ -53,6 +53,7 @@ export interface DownloaderAdapter {
   setPreferences(preferences: Record<string, any>): Promise<boolean>;
   getCategories(): Promise<Record<string, any>>;
   createCategory(name: string, savePath?: string): Promise<boolean>;
+  editCategory?(name: string, savePath: string): Promise<boolean>;
   removeCategories(names: string[]): Promise<boolean>;
 }
 
