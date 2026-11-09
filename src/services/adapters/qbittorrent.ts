@@ -1,6 +1,6 @@
 import { api } from '../api';
 import type { DownloaderAdapter, AddTorrentOptions } from './interface';
-import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/torrent';
+import type { UnifiedTorrent, GlobalState, TorrentProperties, TorrentTracker } from '@/models/torrent';
 import { safeStorage } from '@/utils/storage';
 
 export class QBittorrentAdapter implements DownloaderAdapter {
@@ -472,6 +472,13 @@ export class QBittorrentAdapter implements DownloaderAdapter {
       console.error(`Failed to get trackers for torrent ${id}:`, err);
       return [];
     }
+  }
+
+  async getTorrentTrackerDetails(id: string): Promise<TorrentTracker[]> {
+    const res = await api.get<TorrentTracker[]>(`/torrents/trackers?hash=${encodeURIComponent(id)}`);
+    if (!Array.isArray(res.data)) throw new Error('Invalid tracker response');
+    // Keep discovery entries (DHT, PeX, LSD) and all statistics for the details view.
+    return res.data.filter(tracker => typeof tracker.url === 'string' && tracker.url.length > 0);
   }
 
   async removeTorrentTrackers(id: string, urls: string[]): Promise<boolean> {

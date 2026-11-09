@@ -23,6 +23,17 @@ export interface UnifiedTorrent {
   magnet_uri?: string;
 }
 
+export interface TorrentTracker {
+  url: string;
+  tier: number;
+  status?: number;
+  num_peers?: number;
+  num_seeds?: number;
+  num_leeches?: number;
+  num_downloaded?: number;
+  msg?: string;
+}
+
 export interface GlobalState {
   globalDownloadSpeed: number;
   globalUploadSpeed: number;

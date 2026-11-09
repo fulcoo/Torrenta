@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, shallowRef, computed } from 'vue';
-import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/torrent';
+import type { UnifiedTorrent, GlobalState, TorrentProperties, TorrentTracker } from '@/models/torrent';
 import type { AddTorrentOptions } from '@/services/adapters/interface';
 import { DownloaderFactory } from '@/services/adapters/factory';
 import { useAppStore } from './app';
@@ -1339,6 +1339,30 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     return await driver.getTorrentTrackers(id);
   }
 
+  async function getTorrentTrackerDetails(id: string): Promise<TorrentTracker[]> {
+    if (appStore.simulationMode) {
+      const trackers = await getTorrentTrackers(id);
+      const torrent = simulatedTorrents.value.find(t => t.id === id);
+      return [
+        ...['DHT', 'PeX', 'LSD'].map(name => ({
+          url: `** [${name}] **`, tier: -1, status: 2,
+          num_peers: torrent?.num_peers ?? 0,
+        })),
+        ...trackers.map((tracker, index) => ({
+          ...tracker,
+          status: index === 0 ? 2 : 1,
+          num_peers: index === 0 ? (torrent?.num_peers_total ?? 0) : -1,
+          num_seeds: index === 0 ? (torrent?.num_seeds_total ?? 0) : -1,
+          num_leeches: index === 0 ? (torrent?.num_peers_total ?? 0) : -1,
+          num_downloaded: -1,
+          msg: '',
+        })),
+      ];
+    }
+    if (!driver) throw new Error('Downloader is not connected');
+    return driver.getTorrentTrackerDetails(id);
+  }
+
   async function saveTorrentTrackers(
     ids: string[],
     trackers: { url: string; tier: number }[],
@@ -1509,6 +1533,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
     createTags,
     deleteTags,
     getTorrentTrackers,
+    getTorrentTrackerDetails,
     saveTorrentTrackers,
     downloadQueue,
   };

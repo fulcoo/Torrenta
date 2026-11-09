@@ -405,6 +405,27 @@ describe('QBittorrentAdapter', () => {
   });
 
   describe('trackers', () => {
+    it('preserves tracker statistics and discovery entries for details while keeping editing entries separate', async () => {
+      const data = [
+        { url: '** [DHT] **', tier: -1, status: 0, num_peers: 0, msg: '' },
+        { url: 'https://tracker.example/announce', tier: 2, status: 4, num_peers: -1,
+          num_seeds: 12, num_leeches: 3, num_downloaded: 42, msg: 'Tracker unavailable' },
+      ];
+      vi.mocked(api.get).mockResolvedValue({ data });
+
+      expect(await adapter.getTorrentTrackerDetails('hash1')).toEqual(data);
+      expect(await adapter.getTorrentTrackers('hash1')).toEqual([
+        { url: 'https://tracker.example/announce', tier: 2 },
+      ]);
+    });
+
+    it('rejects failed and malformed tracker detail responses so the UI can show an error', async () => {
+      vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'));
+      await expect(adapter.getTorrentTrackerDetails('hash1')).rejects.toThrow('Network error');
+      vi.mocked(api.get).mockResolvedValueOnce({ data: '' });
+      await expect(adapter.getTorrentTrackerDetails('hash1')).rejects.toThrow('Invalid tracker response');
+    });
+
     it('should return true when addTorrentTrackers receives 200 or 204 No Content', async () => {
       vi.mocked(api.post).mockResolvedValueOnce({ status: 204 } as any);
 

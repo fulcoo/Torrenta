@@ -512,6 +512,8 @@
               </div>
             </div>
 
+            <TorrentTrackerInfo :torrent-id="selectedDetailTorrent.id" />
+
             <!-- Section 3: 时间与活动 (Time & Duration) -->
             <div class="pt-2 border-t border-base-content/5">
               <h4 class="font-black text-[11px] uppercase tracking-wider text-primary border-b border-base-content/10 pb-1.5 mb-2.5">
@@ -1317,6 +1319,7 @@ import FilterSidebar from '@/components/FilterSidebar.vue';
 import TorrentCard from '@/components/TorrentCard.vue';
 import TorrentFileTree from '@/components/TorrentFileTree.vue';
 import EditTrackerModal from '@/components/EditTrackerModal.vue';
+import TorrentTrackerInfo from '@/components/TorrentTrackerInfo.vue';
 import { parseTorrentFile, buildFileTree, parseMagnetLink, type ParsedTorrent, type FileTreeNode } from '@/utils/torrentParser';
 import type { UnifiedTorrent, TorrentProperties } from '@/models/torrent';
 import { matchTorrentStatus } from '@/utils/torrentStatus';

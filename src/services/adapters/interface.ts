@@ -1,4 +1,4 @@
-import type { UnifiedTorrent, GlobalState, TorrentProperties } from '@/models/torrent';
+import type { UnifiedTorrent, GlobalState, TorrentProperties, TorrentTracker } from '@/models/torrent';
 
 export interface AddTorrentOptions {
   urls?: string;
@@ -46,6 +46,7 @@ export interface DownloaderAdapter {
   createTags(tags: string[]): Promise<boolean>;
   deleteTags(tags: string[]): Promise<boolean>;
   getTorrentTrackers(id: string): Promise<{ url: string; tier: number }[]>;
+  getTorrentTrackerDetails(id: string): Promise<TorrentTracker[]>;
   removeTorrentTrackers(id: string, urls: string[]): Promise<boolean>;
   addTorrentTrackers(id: string, urls: string): Promise<boolean>;
   editTorrentTrackerTier(id: string, url: string, tier: number): Promise<boolean>;
