@@ -3,6 +3,7 @@ import { ref, shallowRef, computed } from 'vue';
 import type { UnifiedTorrent, GlobalState, TorrentProperties, TorrentTracker } from '@/models/torrent';
 import type { AddTorrentOptions } from '@/services/adapters/interface';
 import { DownloaderFactory } from '@/services/adapters/factory';
+import { appApiPath } from '@/services/api';
 import { useAppStore } from './app';
 import { useAuthStore } from './auth';
 import { safeStorage } from '@/utils/storage';
@@ -365,7 +366,7 @@ export const useTorrentStore = defineStore('torrentStore', () => {
       try {
         // Check for autologin credentials served by the Nginx proxy
         try {
-          const res = await window.fetch('/api/torrenta-autologin');
+          const res = await window.fetch(appApiPath('torrenta-autologin'));
           if (res.ok) {
             const data = await res.json();
             if (data && data.username && data.password) {

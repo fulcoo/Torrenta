@@ -20,18 +20,18 @@ This manual provides detailed instructions on various deployment options, config
 
 Torrenta natively adheres to the official fnOS (FeiniOS) FPK application packaging specification:
 - **Native OS Integration**: Installs, upgrades, launches, and uninstalls just like any native fnOS app in App Center, complete with high-resolution desktop shortcuts.
-- **Interactive Setup Wizard**: Allows specifying your custom Torrenta WebUI port (Default: `18322`) and target qBittorrent port (Default: `8080`) during installation or upgrade.
+- **Unified Gateway** opens Torrenta in a fnOS desktop window at `/app/torrenta/`. It uses your current fnOS address, including an existing reverse proxy. Requires fnOS 1.1.3100 or later.
 - **Embedded Python Daemon Proxy**: Runs an optimized lightweight daemon server that transparently proxies API traffic and headers to avoid any CORS or cookie restrictions.
 
 ### 📝 Step-by-Step Guide
-1. Go to [GitHub Releases](https://github.com/fulcoo/Torrenta/releases) and download the latest `torrenta-x.x.x.fpk` file.
+1. Download `torrenta.fpk` from [GitHub Releases](https://github.com/fulcoo/Torrenta/releases).
 2. Log into your fnOS desktop and open **App Center**.
 3. Click **Install** / **Manual Install** in the top-right corner.
 4. Choose and upload the downloaded `.fpk` file.
-5. In the installation wizard:
-   - **Torrenta WebUI Port** (Default: `18322`): Set the port used to open Torrenta.
-   - **qBittorrent Port** (Default: `8080`): Set the local qBittorrent WebUI port on your NAS.
-6. Click install. Once finished, click the desktop icon to open Torrenta!
+5. Set the local qBittorrent WebUI port in the wizard. The default is `8080`.
+6. After installation, sign in as a fnOS administrator and click the Torrenta desktop icon.
+
+Enter a direct port such as `18322` during setup. You can use `http://NAS_IP:18322/` as the upstream for an independent HTTPS reverse proxy. Sign in on the Torrenta page with your qBittorrent account. If qBittorrent bypasses local authentication, set an independent password in App Center and sign in as `admin`. Set the direct port to `0` to disable the standalone page.
 
 ### 🛠️ Developer / Source Build
 If you are building from source, simply run:

@@ -65,14 +65,19 @@ This is a quick start guide. For advanced topics like manual installation, alter
 
 Torrenta natively supports **fnOS (FeiniOS)** through official `.fpk` application packages. You can install and manage Torrenta directly from the fnOS App Center with an interactive setup wizard:
 
-1. **Download Package**: Grab the latest `torrenta-x.x.x.fpk` from [GitHub Releases](https://github.com/fulcoo/Torrenta/releases).
+1. **Download Package**: Grab `torrenta.fpk` from [GitHub Releases](https://github.com/fulcoo/Torrenta/releases). The unified gateway requires fnOS 1.1.3100 or later.
 2. **Offline Install**:
    - Open **App Center** on your fnOS desktop -> Click **Install** / **Manual Install** in the top right corner.
    - Upload the `.fpk` file.
-   - Follow the **graphical wizard** to customize your desired Torrenta WebUI port (Default: `18322`) and qBittorrent port (Default: `8080`).
+   - Set your local qBittorrent WebUI port in the wizard. The default is `8080`.
+   - To enable a standalone page, enter a port such as `18322`. Leave the field blank on upgrade to keep the current port.
 3. **Security & Least Privilege**:
    - Torrenta strictly adheres to the **Principle of Least Privilege** (`run-as: package`), executing in an unprivileged sandbox user environment without requesting root permissions.
-4. **Launch**: A desktop shortcut with official high-res icons will be created automatically. Click to open and enjoy!
+4. **Launch**: Sign in as a fnOS administrator and click the Torrenta desktop icon. It opens in a window at `/app/torrenta/` on the same address as the fnOS desktop. If you access fnOS through a reverse proxy, that same proxy serves the app.
+
+With account login protection enabled, you can select **Skip the password in the fnOS desktop** under **Settings → Security** from either FPK entry. Both entries share this setting. The independent port still requires sign-in.
+
+Use `http://NAS_IP:18322/` as the upstream for an independent HTTPS reverse proxy. Sign in on the Torrenta page with your qBittorrent credentials. If qBittorrent bypasses local authentication, you can sign in as `admin` with the independent password set in App Center. Set the direct port to `0` to disable this entry.
 
 > 💡 **Developer Build**: Run `npm run build:fpk` in the root folder to automate icon generation, frontend compilation, and FPK assembly (output saved in `release/`).
 

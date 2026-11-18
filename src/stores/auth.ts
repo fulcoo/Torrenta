@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { safeStorage } from '@/utils/storage';
+import { appApiPath, usesDirectLogin, usesFnOSGateway } from '@/services/api';
 import { useAppStore } from './app';
 import { useTorrentStore } from './torrent';
 
@@ -15,13 +16,21 @@ export interface SecurityConfig {
   authEnabled: boolean;
   authUsername: string;
   authPassword?: string;
+  skipGatewayPassword?: boolean;
 }
 
 export const useAuthStore = defineStore('authStore', () => {
   const appStore = useAppStore();
   const torrentStore = useTorrentStore();
+  const directLogin = usesDirectLogin();
+  const fnosGateway = usesFnOSGateway();
+  const supportsGatewayLoginPreference = fnosGateway || directLogin;
+  const directSessionReady = ref(!directLogin);
 
   const authEnabled = ref(safeStorage.getItem('torrenta_auth_enabled') === 'true');
+  const skipGatewayPassword = ref(safeStorage.getItem('torrenta_skip_gateway_password') === 'true');
+  const gatewayPasswordBypassed = computed(() => fnosGateway && authEnabled.value && skipGatewayPassword.value);
+  const requiresAppLogin = computed(() => directLogin || (authEnabled.value && !gatewayPasswordBypassed.value));
   
   // The authentication credentials directly match qBittorrent
   const effectiveUsername = computed(() => {
@@ -33,8 +42,9 @@ export const useAuthStore = defineStore('authStore', () => {
   });
 
   const session = ref<AuthSession | null>(
-    safeStorage.getJSON<AuthSession | null>('torrenta_auth_session', null)
+    directLogin ? null : safeStorage.getJSON<AuthSession | null>('torrenta_auth_session', null)
   );
+  let directLogout: Promise<void> | undefined;
 
   // Time ticker to update remaining time and trigger reactive expiry
   const now = ref(Date.now());
@@ -64,16 +74,21 @@ export const useAuthStore = defineStore('authStore', () => {
   });
 
   const isAuthenticated = computed(() => {
-    if (!authEnabled.value) return true;
+    if (directLogin) return !!session.value && !isExpired.value;
+    if (!requiresAppLogin.value) return true;
     if (!session.value) return false;
     if (session.value.username !== effectiveUsername.value) return false;
     return !isExpired.value;
   });
 
+  const needsDirectLogin = computed(() => directLogin && !isAuthenticated.value);
+
   // Determines why the login/connect modal is currently active
   const lockReason = computed<'none' | 'auth_required' | 'connection_failed' | 'not_configured'>(() => {
+    if (needsDirectLogin.value) return 'auth_required';
+
     if (appStore.simulationMode) {
-      return (authEnabled.value && !isAuthenticated.value) ? 'auth_required' : 'none';
+      return requiresAppLogin.value && !isAuthenticated.value ? 'auth_required' : 'none';
     }
 
     // 1. If downloader is not connected after boot attempt
@@ -85,7 +100,7 @@ export const useAuthStore = defineStore('authStore', () => {
     }
 
     // 2. If login protection is enabled and user is not authenticated or expired
-    if (authEnabled.value && !isAuthenticated.value) {
+    if (requiresAppLogin.value && !isAuthenticated.value) {
       return 'auth_required';
     }
 
@@ -103,6 +118,7 @@ export const useAuthStore = defineStore('authStore', () => {
   });
 
   function touchSession() {
+    if (directLogin) return;
     if (session.value && !isExpired.value) {
       session.value.loginTime = Date.now();
       now.value = Date.now();
@@ -118,15 +134,62 @@ export const useAuthStore = defineStore('authStore', () => {
     return false;
   }
 
+  function setDirectSession(data: { username: string; expiresAt: number }) {
+    now.value = Date.now();
+    session.value = { username: data.username, loginTime: data.expiresAt - SESSION_DURATION_MS };
+  }
+
+  async function restoreDirectSession() {
+    if (!directLogin) return true;
+    try {
+      const response = await fetch(appApiPath('torrenta-session'));
+      if (!response.ok) return false;
+      const data = await response.json();
+      await appStore.loadServerSettings();
+      setDirectSession(data);
+      return isAuthenticated.value;
+    } catch {
+      return false;
+    } finally {
+      directSessionReady.value = true;
+    }
+  }
+
+  async function loginDirect(username: string, password: string) {
+    try {
+      await directLogout;
+      const response = await fetch(appApiPath('torrenta-session'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || 'invalidCredentials' };
+      }
+      if (data.qbCredentials) {
+        appStore.saveConfig('', username, password, 'qbittorrent');
+      }
+      await appStore.loadServerSettings();
+      setDirectSession(data);
+      void torrentStore.bootClient().catch(() => {});
+      return { success: true };
+    } catch {
+      return { success: false, error: 'directBackendUnavailable' };
+    }
+  }
+
   async function login(user: string, pass: string, url?: string): Promise<{ success: boolean; error?: string }> {
     const cleanUser = (user || '').trim();
     const cleanPass = pass || '';
     const cleanUrl = url !== undefined ? url.trim() : appStore.url;
+    if (needsDirectLogin.value) return loginDirect(cleanUser, cleanPass);
 
     // Try real downloader connection attempt
     try {
       const success = await torrentStore.connectWithCredentials(cleanUrl, cleanUser, cleanPass);
       if (success) {
+        if (directLogin) return { success: true };
         // Create 24-hour session
         const newSession: AuthSession = {
           username: cleanUser,
@@ -149,17 +212,37 @@ export const useAuthStore = defineStore('authStore', () => {
   }
 
   function logout() {
+    if (directLogin) {
+      clearDirectSession();
+      if (!directLogout) {
+        directLogout = fetch(appApiPath('torrenta-session'), { method: 'DELETE' })
+          .then(() => {}, () => {})
+          .finally(() => { directLogout = undefined; });
+      }
+      return;
+    }
     session.value = null;
     safeStorage.removeItem('torrenta_auth_session');
+  }
+
+  function clearDirectSession() {
+    session.value = null;
+    torrentStore.stopSyncLoop();
+    torrentStore.isConnected = false;
   }
 
   function updateAuthConfig(params: {
     enabled: boolean;
     username: string;
     password?: string;
+    skipGatewayPassword?: boolean;
   }) {
     authEnabled.value = params.enabled;
     safeStorage.setItem('torrenta_auth_enabled', String(params.enabled));
+    if (supportsGatewayLoginPreference && params.skipGatewayPassword !== undefined) {
+      skipGatewayPassword.value = params.skipGatewayPassword;
+      safeStorage.setItem('torrenta_skip_gateway_password', String(skipGatewayPassword.value));
+    }
 
     const cleanUser = params.username.trim() || 'admin';
     safeStorage.setItem('torrenta_auth_username', cleanUser);
@@ -172,7 +255,8 @@ export const useAuthStore = defineStore('authStore', () => {
       appStore.saveConfig(appStore.url, cleanUser, appStore.password, appStore.driverType);
     }
 
-    if (params.enabled) {
+    if (directLogin) return;
+    if (requiresAppLogin.value) {
       // Refresh current session so user remains logged in for next 24h
       const activeSession: AuthSession = {
         username: cleanUser,
@@ -186,11 +270,21 @@ export const useAuthStore = defineStore('authStore', () => {
     }
   }
 
+  async function saveGatewayLoginPreference(authEnabled: boolean, skipGatewayPassword: boolean) {
+    const response = await fetch(appApiPath('gateway-login-preference'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ authEnabled, skipGatewayPassword }),
+    });
+    if (!response.ok) throw new Error('Failed to save gateway login settings');
+  }
+
   function getSecurityData(): SecurityConfig {
     return {
       authEnabled: authEnabled.value,
       authUsername: effectiveUsername.value,
       authPassword: effectivePassword.value,
+      ...(supportsGatewayLoginPreference ? { skipGatewayPassword: skipGatewayPassword.value } : {}),
     };
   }
 
@@ -199,6 +293,10 @@ export const useAuthStore = defineStore('authStore', () => {
     if (typeof data.authEnabled === 'boolean') {
       authEnabled.value = data.authEnabled;
       safeStorage.setItem('torrenta_auth_enabled', String(data.authEnabled));
+    }
+    if (supportsGatewayLoginPreference && typeof data.skipGatewayPassword === 'boolean') {
+      skipGatewayPassword.value = data.skipGatewayPassword;
+      safeStorage.setItem('torrenta_skip_gateway_password', String(skipGatewayPassword.value));
     }
     if (typeof data.authUsername === 'string' && data.authUsername) {
       safeStorage.setItem('torrenta_auth_username', data.authUsername);
@@ -210,6 +308,17 @@ export const useAuthStore = defineStore('authStore', () => {
 
   return {
     authEnabled,
+    fnosGateway,
+    supportsGatewayLoginPreference,
+    saveGatewayLoginPreference,
+    skipGatewayPassword,
+    gatewayPasswordBypassed,
+    requiresAppLogin,
+    directLogin,
+    directSessionReady,
+    needsDirectLogin,
+    restoreDirectSession,
+    clearDirectSession,
     authUsername: effectiveUsername,
     authPassword: effectivePassword,
     session,

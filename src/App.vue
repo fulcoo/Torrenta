@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useAppStore } from '@/stores/app';
 import { useTorrentStore } from '@/stores/torrent';
 import { useAuthStore } from '@/stores/auth';
+import { DIRECT_SESSION_EXPIRED } from '@/services/api';
 import { useI18n } from '@/i18n/useI18n';
 import Dashboard from '@/views/Dashboard.vue';
 import Settings from '@/views/Settings.vue';
@@ -24,6 +25,7 @@ import {
 const appStore = useAppStore();
 const torrentStore = useTorrentStore();
 const authStore = useAuthStore();
+const gatewaySettingsReady = ref(!authStore.fnosGateway);
 const { t } = useI18n();
 
 // Simple hash router
@@ -57,7 +59,7 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Sync state on hashchange
   window.addEventListener('hashchange', () => {
     currentPath.value = window.location.hash || '#/';
@@ -67,6 +69,14 @@ onMounted(() => {
   document.documentElement.setAttribute('data-theme', appStore.theme);
   document.addEventListener('click', handleDocumentClick);
   window.addEventListener('keydown', handleKeydown);
+  if (authStore.directLogin) {
+    window.addEventListener(DIRECT_SESSION_EXPIRED, authStore.clearDirectSession);
+    if (!await authStore.restoreDirectSession()) return;
+  }
+  if (authStore.fnosGateway) {
+    await appStore.loadServerSettings();
+    gatewaySettingsReady.value = true;
+  }
 
   // Attempt initial client boot to check connection
   if (!torrentStore.hasAttemptedBoot) {
@@ -77,6 +87,7 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleDocumentClick);
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener(DIRECT_SESSION_EXPIRED, authStore.clearDirectSession);
 });
 
 const routes: Record<string, any> = {
@@ -216,14 +227,14 @@ const isSettings = computed(() => {
 
           <!-- User Auth Logout / Lock Button (when auth enabled and logged in) -->
           <button
-            v-if="authStore.authEnabled && authStore.isAuthenticated"
+            v-if="authStore.requiresAppLogin && authStore.isAuthenticated"
             type="button"
             @click="authStore.logout()"
             class="btn btn-ghost btn-sm rounded-xl gap-1.5 text-xs font-bold opacity-75 hover:opacity-100 hover:text-error hover:bg-error/10 ml-0.5 transition-all"
             :title="`${t('nav.authProtected')} (${authStore.authUsername}) - ${t('nav.logout')}`"
           >
             <ShieldCheckIcon class="h-4 w-4 text-success" />
-            <span class="hidden md:inline">{{ authStore.authUsername }}</span>
+            <span class="hidden md:inline">{{ authStore.session?.username || authStore.authUsername }}</span>
             <LogOutIcon class="h-3.5 w-3.5 opacity-60" />
           </button>
         </div>
@@ -237,7 +248,7 @@ const isSettings = computed(() => {
       :inert="authStore.isLocked ? true : undefined"
     >
       <transition name="fade" mode="out-in">
-        <component :is="currentView" />
+        <component :is="currentView" v-if="gatewaySettingsReady && !authStore.needsDirectLogin" />
       </transition>
     </main>
 
@@ -250,7 +261,7 @@ const isSettings = computed(() => {
     </footer>
 
     <!-- Global Login Modal / Lock Screen -->
-    <LoginModal />
+    <LoginModal v-if="gatewaySettingsReady && authStore.directSessionReady" />
   </div>
 </template>
 

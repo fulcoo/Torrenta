@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { safeStorage } from '@/utils/storage';
 import { useAuthStore } from '@/stores/auth';
+import { appApiPath, usesDirectLogin, usesFnOSGateway } from '@/services/api';
 
 export interface CategoryConfig {
   name: string;
@@ -117,7 +118,7 @@ export const useAppStore = defineStore('appStore', () => {
         security: useAuthStore().getSecurityData(),
       };
 
-      await fetch('/api/user-settings', {
+      await fetch(appApiPath('user-settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -130,7 +131,7 @@ export const useAppStore = defineStore('appStore', () => {
   async function loadServerSettings() {
     if (typeof fetch === 'undefined') return;
     try {
-      const res = await fetch('/api/user-settings');
+      const res = await fetch(appApiPath('user-settings'));
       if (!res.ok) return;
       const data = await res.json();
       if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
@@ -139,7 +140,14 @@ export const useAppStore = defineStore('appStore', () => {
 
       // Security Settings
       if (data.security) {
-        useAuthStore().hydrateSecurityData(data.security);
+        const authStore = useAuthStore();
+        authStore.hydrateSecurityData(data.security);
+        const savedPassword = data.security.authPassword;
+        if (authStore.gatewayPasswordBypassed && !password.value && typeof savedPassword === 'string' && savedPassword) {
+          password.value = savedPassword;
+          const savedUsername = data.security.authUsername;
+          if (typeof savedUsername === 'string' && savedUsername) username.value = savedUsername;
+        }
       }
 
       // 1. Appearance
@@ -592,7 +600,7 @@ export const useAppStore = defineStore('appStore', () => {
   }
 
   // Hydrate persistent settings from server on boot
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && !usesDirectLogin() && !usesFnOSGateway()) {
     loadServerSettings();
   }
 

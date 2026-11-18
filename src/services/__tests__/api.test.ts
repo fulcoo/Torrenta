@@ -1,11 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { resolveBaseUrl, api } from '../api';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { appApiPath, resolveBaseUrl, api } from '../api';
 import { safeStorage } from '@/utils/storage';
 
 describe('api service', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   describe('resolveBaseUrl', () => {
@@ -22,6 +26,16 @@ describe('api service', () => {
 
     it('should return relative path if starting with a slash', () => {
       expect(resolveBaseUrl('/my-custom-proxy')).toBe('/my-custom-proxy');
+    });
+
+    it('uses the gateway base for app APIs and a saved default qBittorrent path', () => {
+      vi.stubEnv('BASE_URL', '/app/torrenta/');
+
+      expect(appApiPath('user-settings')).toBe('/app/torrenta/api/user-settings');
+      expect(appApiPath('torrenta-autologin')).toBe('/app/torrenta/api/torrenta-autologin');
+      expect(resolveBaseUrl()).toBe('/app/torrenta/api/v2');
+      expect(resolveBaseUrl('/api/v2')).toBe('/app/torrenta/api/v2');
+      expect(resolveBaseUrl('https://qb.example.com')).toBe('https://qb.example.com/api/v2');
     });
 
     it('should handle full HTTP/HTTPS urls and append /api/v2 if missing', () => {

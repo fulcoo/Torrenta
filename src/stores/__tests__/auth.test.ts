@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { useAuthStore, SESSION_DURATION_MS } from '../auth';
+import { useAppStore } from '../app';
 import { useTorrentStore } from '../torrent';
 import { safeStorage } from '@/utils/storage';
 
@@ -13,6 +14,99 @@ describe('authStore', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('uses the independent server session and keeps the fallback password out of downloader config', async () => {
+    vi.stubEnv('MODE', 'fpk-direct');
+    safeStorage.setJSON('torrenta_auth_session', { username: 'admin', loginTime: Date.now() });
+    const fetchSession = vi.fn()
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({ ok: false, json: async () => ({ error: 'invalidCredentials' }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ username: 'admin', expiresAt: Date.now() + SESSION_DURATION_MS, qbCredentials: false }),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal('fetch', fetchSession);
+    const authStore = useAuthStore();
+    const appStore = useAppStore();
+    const torrentStore = useTorrentStore();
+    const saveConfig = vi.spyOn(appStore, 'saveConfig');
+    vi.spyOn(appStore, 'loadServerSettings').mockResolvedValue();
+    vi.spyOn(torrentStore, 'bootClient').mockResolvedValue(true);
+    try {
+      authStore.hydrateSecurityData({ authEnabled: true, skipGatewayPassword: true });
+      expect(authStore.supportsGatewayLoginPreference).toBe(true);
+      expect(authStore.needsDirectLogin).toBe(true);
+      expect(await authStore.restoreDirectSession()).toBe(false);
+      expect(authStore.directSessionReady).toBe(true);
+      expect(await authStore.login('admin', 'wrong')).toEqual({ success: false, error: 'invalidCredentials' });
+      expect(authStore.needsDirectLogin).toBe(true);
+      expect(await authStore.login('admin', 'independent-password')).toEqual({ success: true });
+      expect(fetchSession).toHaveBeenNthCalledWith(3, '/api/torrenta-session', expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ username: 'admin', password: 'independent-password' }),
+      }));
+      expect(saveConfig).not.toHaveBeenCalled();
+      expect(authStore.session?.username).toBe('admin');
+      expect(authStore.isAuthenticated).toBe(true);
+      authStore.logout();
+      expect(authStore.needsDirectLogin).toBe(true);
+      expect(fetchSession).toHaveBeenLastCalledWith('/api/torrenta-session', { method: 'DELETE' });
+    } finally {
+      authStore.stopTicker();
+    }
+  });
+
+  it('skips the extra password only in the fnOS desktop and restores saved downloader credentials', async () => {
+    vi.stubEnv('MODE', 'fpk-gateway');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        security: { authEnabled: true, skipGatewayPassword: true, authUsername: 'admin', authPassword: 'saved-password' },
+      }),
+    }));
+    const authStore = useAuthStore();
+    const appStore = useAppStore();
+    try {
+      authStore.hydrateSecurityData({ authEnabled: true });
+      expect(authStore.lockReason).toBe('auth_required');
+      expect(authStore.supportsGatewayLoginPreference).toBe(true);
+      await appStore.loadServerSettings();
+      expect(authStore.lockReason).toBe('none');
+      expect(authStore.getSecurityData().skipGatewayPassword).toBe(true);
+      expect(appStore.username).toBe('admin');
+      expect(appStore.password).toBe('saved-password');
+
+      authStore.updateAuthConfig({ enabled: true, username: 'admin', skipGatewayPassword: false });
+      authStore.logout();
+      expect(authStore.lockReason).toBe('auth_required');
+    } finally {
+      authStore.stopTicker();
+    }
+  });
+
+  it.each([
+    ['fpk-gateway', '/app/torrenta/', '/app/torrenta/api/gateway-login-preference'],
+    ['fpk-direct', '/', '/api/gateway-login-preference'],
+  ])('saves the shared login preference from %s', async (mode, base, endpoint) => {
+    vi.stubEnv('MODE', mode);
+    vi.stubEnv('BASE_URL', base);
+    const fetchSettings = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchSettings);
+    const authStore = useAuthStore();
+    try {
+      await authStore.saveGatewayLoginPreference(true, true);
+      expect(fetchSettings).toHaveBeenCalledWith(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ authEnabled: true, skipGatewayPassword: true }),
+      });
+    } finally {
+      authStore.stopTicker();
+    }
   });
 
   it('should initialize with auth disabled by default and unlocked when boot has not attempted', () => {
@@ -46,6 +140,7 @@ describe('authStore', () => {
     safeStorage.setItem('torrenta_auth_enabled', 'true');
     safeStorage.setItem('torrenta_username', 'admin');
     safeStorage.setItem('torrenta_password', 'secret123');
+    safeStorage.setItem('torrenta_skip_gateway_password', 'true');
 
     const authStore = useAuthStore();
     const torrentStore = useTorrentStore();

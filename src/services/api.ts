@@ -1,6 +1,20 @@
 import axios from 'axios';
 import { safeStorage } from '@/utils/storage';
 
+export const DIRECT_SESSION_EXPIRED = 'torrenta-direct-session-expired';
+
+export function usesDirectLogin(): boolean {
+  return import.meta.env.MODE === 'fpk-direct';
+}
+
+export function usesFnOSGateway(): boolean {
+  return import.meta.env.MODE === 'fpk-gateway';
+}
+
+export function appApiPath(endpoint: string): string {
+  return `${import.meta.env.BASE_URL}api/${endpoint}`;
+}
+
 // Create a generic axios instance
 export const api = axios.create({
   timeout: 10000,
@@ -9,16 +23,13 @@ export const api = axios.create({
 
 /**
  * Resolves the base URL for the API.
- * If running in Alternative WebUI mode, it returns relative path `/api/v2`.
+ * Without a custom URL, use the API on the same origin and base path as the UI.
  * If an absolute URL is configured (e.g. http://192.168.1.100:8080), it cleans it and appends `/api/v2`.
  */
 export function resolveBaseUrl(configuredUrl?: string): string {
-  if (!configuredUrl) {
-    return '/api/v2';
-  }
-  let trimmed = configuredUrl.trim();
-  if (!trimmed) {
-    return '/api/v2';
+  let trimmed = configuredUrl?.trim() || '';
+  if (!trimmed || (import.meta.env.BASE_URL !== '/' && /^\/api\/v2\/?$/.test(trimmed))) {
+    return appApiPath('v2');
   }
   
   // If the user entered a raw domain/IP (e.g. 127.0.0.1:8081 or localhost:8080)
@@ -38,28 +49,21 @@ export function resolveBaseUrl(configuredUrl?: string): string {
   return trimmed;
 }
 
-// Request interceptor to dynamically rewrite the baseURL based on current storage configs
-api.interceptors.request.use((config) => {
-  const storeData = safeStorage.getJSON<{ url?: string }>('torrenta_app_config', {});
-  let finalBaseUrl = '/api/v2';
-
-  if (storeData && storeData.url) {
-    const urlStr = storeData.url.toLowerCase();
-    // If in dev mode and the URL points to the local qBittorrent on 8080,
-    // route it through the Vite dev proxy (/api/v2) to avoid CORS issues.
-    if (
-      import.meta.env.DEV &&
-      (urlStr.includes('localhost:8080') ||
-       urlStr.includes('127.0.0.1:8080') ||
-       urlStr.includes('[::1]:8080'))
-    ) {
-      finalBaseUrl = '/api/v2';
-    } else {
-      finalBaseUrl = resolveBaseUrl(storeData.url);
-    }
+function getConfiguredApiBase(): string {
+  const storedConfig = safeStorage.getJSON<{ url?: string } | null>('torrenta_app_config', null);
+  const url = typeof storedConfig?.url === 'string' ? storedConfig.url : undefined;
+  const configuredUrl = url?.toLowerCase() || '';
+  // Route local qBittorrent through the Vite dev proxy.
+  if (import.meta.env.DEV && ['localhost:8080', '127.0.0.1:8080', '[::1]:8080'].some(
+    host => configuredUrl.includes(host)
+  )) {
+    return appApiPath('v2');
   }
+  return resolveBaseUrl(url);
+}
 
-  config.baseURL = finalBaseUrl;
+api.interceptors.request.use((config) => {
+  config.baseURL = getConfiguredApiBase();
   return config;
 }, (error) => {
   return Promise.reject(error);
@@ -82,7 +86,7 @@ export async function silentReauth(): Promise<boolean> {
       // Check if backend autologin endpoint can provide credentials if none stored locally
       if (!finalUser && !finalPass && typeof window !== 'undefined' && typeof window.fetch === 'function') {
         try {
-          const autoRes = await window.fetch('/api/torrenta-autologin');
+          const autoRes = await window.fetch(appApiPath('torrenta-autologin'));
           if (autoRes.ok) {
             const autoData = await autoRes.json();
             if (autoData?.username || autoData?.password) {
@@ -103,24 +107,8 @@ export async function silentReauth(): Promise<boolean> {
       if (finalUser) params.append('username', finalUser);
       if (finalPass) params.append('password', finalPass);
 
-      const storeData = safeStorage.getJSON<{ url?: string }>('torrenta_app_config', {});
-      let loginBaseUrl = '/api/v2';
-      if (storeData && storeData.url) {
-        const urlStr = storeData.url.toLowerCase();
-        if (
-          import.meta.env.DEV &&
-          (urlStr.includes('localhost:8080') ||
-           urlStr.includes('127.0.0.1:8080') ||
-           urlStr.includes('[::1]:8080'))
-        ) {
-          loginBaseUrl = '/api/v2';
-        } else {
-          loginBaseUrl = resolveBaseUrl(storeData.url);
-        }
-      }
-
       // Directly call axios.post with independent config to bypass interceptor recursion
-      const loginRes = await axios.post(`${loginBaseUrl}/auth/login`, params, {
+      const loginRes = await axios.post(`${getConfiguredApiBase()}/auth/login`, params, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         withCredentials: true,
         timeout: 10000,
@@ -152,6 +140,11 @@ api.interceptors.response.use(
 
     const status = error.response?.status;
     const url = originalRequest.url || '';
+
+    if (usesDirectLogin() && status === 401 && error.response?.data?.error === 'authRequired') {
+      window.dispatchEvent(new Event(DIRECT_SESSION_EXPIRED));
+      return Promise.reject(error);
+    }
 
     // If session expired (401 or 403) and not already retrying or logging in
     if ((status === 401 || status === 403) && !originalRequest._retry && !url.includes('/auth/login')) {

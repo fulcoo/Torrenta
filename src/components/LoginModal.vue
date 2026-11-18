@@ -82,7 +82,9 @@ async function handleLogin() {
       password.value = '';
       errorMessage.value = '';
     } else {
-      errorMessage.value = result.error || t('auth.invalidCredentials');
+      errorMessage.value = authStore.needsDirectLogin && result.error
+        ? t(`auth.${result.error}`)
+        : result.error || t('auth.invalidCredentials');
     }
   } catch (err: any) {
     isLoading.value = false;
@@ -145,7 +147,7 @@ function toggleLocale() {
               <span>{{ isConnectionIssue ? t('auth.connIssueTitle') : t('auth.modalTitle') }}</span>
             </p>
             <p class="text-xs opacity-60 mt-0.5 max-w-sm mx-auto">
-              {{ isConnectionIssue ? t('auth.connIssueSubtitle') : t('auth.modalSubtitle') }}
+              {{ isConnectionIssue ? t('auth.connIssueSubtitle') : t(authStore.needsDirectLogin ? 'auth.directSubtitle' : 'auth.modalSubtitle') }}
             </p>
           </div>
         </div>
@@ -228,7 +230,7 @@ function toggleLocale() {
         <!-- Form Fields (Solve directly on login page) -->
         <form @submit.prevent="handleLogin" class="flex flex-col gap-3.5 text-left">
           <!-- WebUI Server URL (Always visible if connection issue, or toggleable) -->
-          <div v-if="isConnectionIssue || showAdvancedUrl" class="form-control w-full animate-fadeIn">
+          <div v-if="!authStore.needsDirectLogin && (isConnectionIssue || showAdvancedUrl)" class="form-control w-full animate-fadeIn">
             <label class="label py-1 text-xs font-bold opacity-75 justify-between">
               <span>{{ t('auth.serverUrl') }}</span>
               <span class="text-[10px] text-primary lowercase">{{ t('settings.autoDetect') }}</span>
@@ -245,7 +247,7 @@ function toggleLocale() {
           </div>
 
           <!-- Toggle Advanced URL when not in connection issue mode -->
-          <div v-else class="text-right">
+          <div v-else-if="!authStore.needsDirectLogin" class="text-right">
             <button
               type="button"
               @click="showAdvancedUrl = true"
@@ -304,7 +306,7 @@ function toggleLocale() {
           <!-- 24-hour Session Expiry Notice -->
           <div class="flex items-center gap-2 p-2.5 rounded-xl bg-base-200/50 border border-base-content/5 text-[11px] text-base-content/70">
             <ClockIcon class="h-4 w-4 text-primary shrink-0" />
-            <span>{{ t('auth.sessionPolicy') }}</span>
+            <span>{{ t(authStore.needsDirectLogin ? 'auth.directSessionPolicy' : 'auth.sessionPolicy') }}</span>
           </div>
 
           <!-- Submit Button -->

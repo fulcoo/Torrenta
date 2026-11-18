@@ -42,14 +42,19 @@
 
 Torrenta 现已全面支持 **飞牛私有云 (fnOS)** 原生 FPK 应用包格式，无需配置繁琐的 Docker 参数，即可在应用中心一键离线安装与管理。
 
-1. **下载安装包**：前往 [Releases 页面](https://github.com/fulcoo/Torrenta/releases) 下载最新版本的 `torrenta-x.x.x.fpk`。
+1. **下载安装包**：前往 [Releases 页面](https://github.com/fulcoo/Torrenta/releases) 下载 `torrenta.fpk`。统一网关要求 fnOS 1.1.3100 或更高版本。
 2. **离线安装**：
    - 登录飞牛 fnOS 桌面，打开 **应用中心** -> 点击右上角 **安装** / **手动安装**。
    - 选择下载的 `.fpk` 文件并上传。
-   - 在弹出的**图形化安装向导**中，按需设置 Torrenta 访问端口（默认: `18322`）以及 qBittorrent 端口（默认: `8080`）。
+   - 在安装向导中设置 NAS 本机的 qBittorrent WebUI 端口，默认 `8080`。
+   - 如需通过独立网页或反代访问，填写独立端口，例如 `18322`。升级时可留空保留现有端口。
 3. **安全与最小权限**：
    - Torrenta 严格遵循 Linux/fnOS **最小权限安全规范**（`run-as: package`），作为无特权的隔离沙盒用户运行，绝不索取 NAS 的 `root` 最高权限。
-4. **即点即用**：安装完成后，飞牛桌面将自动生成 Torrenta 图标，点击即可直接进入现代化管理面板！
+4. **打开窗口**：用飞牛管理员账号登录后，点击桌面的 Torrenta 图标。窗口通过当前飞牛地址的 `/app/torrenta/` 加载，可直接复用飞牛主页的反代。
+
+在任一 FPK 入口的 **设置 → 安全认证** 中打开账号登录保护后，可以启用 **飞牛桌面免输密码**。两处共用此设置。独立端口仍显示 Torrenta 登录表单。
+
+独立网页使用 `http://NAS_IP:18322/`，公网 HTTPS 反代的上游同样填这个地址。Torrenta 登录页支持经 qBittorrent 校验的账号。若 qBittorrent 对本机免密，可在应用中心的应用设置里设置独立密码，用账号 `admin` 登录。端口填 `0` 可以关闭独立入口。
 
 > 💡 **开发者打包**：项目根目录执行 `npm run build:fpk`，即可全自动完成图标生成、前端编译与 FPK 打包（产物位于 `release/` 目录）。
 

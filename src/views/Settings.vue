@@ -2393,6 +2393,13 @@
 
               <!-- Configuration Form (Visible when enabled) -->
               <div v-if="authForm.enabled" class="flex flex-col gap-4 p-4 bg-base-200/30 rounded-2xl border border-base-content/5 animate-fadeIn">
+                <label v-if="authStore.supportsGatewayLoginPreference" class="flex items-center justify-between gap-4 p-3 rounded-xl bg-base-200/50">
+                  <span class="flex flex-col gap-1">
+                    <span class="text-sm font-bold">{{ t('settings.skipGatewayPassword') }}</span>
+                    <span class="text-xs opacity-70">{{ t('settings.skipGatewayPasswordDesc') }}</span>
+                  </span>
+                  <input v-model="authForm.skipGatewayPassword" type="checkbox" class="toggle toggle-primary" />
+                </label>
                 <!-- Username -->
                 <div class="form-control w-full">
                   <label class="label py-1 text-xs font-bold opacity-75">
@@ -2421,6 +2428,7 @@
                       <KeyRoundIcon class="absolute left-3.5 h-4 w-4 opacity-40 pointer-events-none" />
                       <input
                         v-model="authForm.password"
+                        autocomplete="new-password"
                         :type="authForm.showPassword ? 'text' : 'password'"
                         :placeholder="authStore.authPassword ? '••••••••' : t('settings.authPasswordPlaceholder')"
                         class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 !pl-10 pr-10 border border-base-content/10 font-mono"
@@ -2445,6 +2453,7 @@
                       <KeyRoundIcon class="absolute left-3.5 h-4 w-4 opacity-40 pointer-events-none" />
                       <input
                         v-model="authForm.confirmPassword"
+                        autocomplete="new-password"
                         :type="authForm.showConfirmPassword ? 'text' : 'password'"
                         :placeholder="authStore.authPassword ? '••••••••' : t('settings.authPasswordConfirmPlaceholder')"
                         class="input input-bordered w-full rounded-xl bg-base-200 focus:outline-none focus:border-primary text-sm h-11 !pl-10 pr-10 border border-base-content/10 font-mono"
@@ -2476,6 +2485,7 @@
                 <button
                   type="button"
                   @click="saveSecuritySettings"
+                  :disabled="savingSecuritySettings"
                   class="btn btn-primary btn-sm rounded-xl px-5 font-bold shadow-lg shadow-primary/20 flex items-center gap-2"
                 >
                   <ShieldCheckIcon class="h-4 w-4" />
@@ -2486,7 +2496,7 @@
           </div>
 
           <!-- Session Info & Quick Lockout Card (Visible when active and authenticated) -->
-          <div v-if="authStore.authEnabled && authStore.isAuthenticated" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4 text-left animate-fadeIn">
+          <div v-if="authStore.requiresAppLogin && authStore.isAuthenticated" class="card glassmorphic shadow-xl rounded-xl sm:rounded-2xl border border-base-content/10 p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4 text-left animate-fadeIn">
             <div class="flex flex-col gap-1 border-b border-base-content/10 pb-3">
               <h3 class="text-sm font-bold flex items-center gap-2">
                 <ClockIcon class="h-4 w-4 text-accent" />
@@ -2794,6 +2804,7 @@ function getTabLabel(tab: 'general' | 'download' | 'speed' | 'connection' | 'bit
 // Security & Authentication Configuration
 const authForm = reactive({
   enabled: authStore.authEnabled,
+  skipGatewayPassword: authStore.skipGatewayPassword,
   username: authStore.authUsername || 'admin',
   password: '',
   confirmPassword: '',
@@ -2808,6 +2819,9 @@ watch(
     authForm.enabled = val;
   }
 );
+watch(() => authStore.skipGatewayPassword, (val) => {
+  authForm.skipGatewayPassword = val;
+});
 watch(
   () => authStore.authUsername,
   (val) => {
@@ -2834,7 +2848,10 @@ function showSecurityFeedback(text: string, type: 'success' | 'error' = 'success
   }, 4000);
 }
 
-function saveSecuritySettings() {
+const savingSecuritySettings = ref(false);
+
+async function saveSecuritySettings() {
+  if (savingSecuritySettings.value) return;
   const cleanUser = authForm.username.trim();
   if (!cleanUser) {
     showSecurityFeedback(t('settings.authUsernameEmpty'), 'error');
@@ -2843,7 +2860,8 @@ function saveSecuritySettings() {
 
   if (authForm.enabled) {
     // If enabling and no existing password, password is required
-    if (!authStore.authPassword && !authForm.password) {
+    const skipGatewayPassword = authStore.supportsGatewayLoginPreference && authForm.skipGatewayPassword;
+    if (!skipGatewayPassword && !authStore.authPassword && !authForm.password) {
       showSecurityFeedback(t('settings.authPasswordEmpty'), 'error');
       return;
     }
@@ -2857,16 +2875,27 @@ function saveSecuritySettings() {
     }
   }
 
-  authStore.updateAuthConfig({
+  const config = {
     enabled: authForm.enabled,
+    skipGatewayPassword: authForm.skipGatewayPassword,
     username: cleanUser,
-    password: authForm.password ? authForm.password : undefined,
-  });
-
-  appStore.scheduleServerSync();
-  authForm.password = '';
-  authForm.confirmPassword = '';
-  showSecurityFeedback(t('settings.authSaved'), 'success');
+    password: authForm.password || undefined,
+  };
+  savingSecuritySettings.value = true;
+  try {
+    if (authStore.supportsGatewayLoginPreference) {
+      await authStore.saveGatewayLoginPreference(config.enabled, config.skipGatewayPassword);
+    }
+    authStore.updateAuthConfig(config);
+    appStore.scheduleServerSync();
+    authForm.password = '';
+    authForm.confirmPassword = '';
+    showSecurityFeedback(t('settings.authSaved'), 'success');
+  } catch {
+    showSecurityFeedback(t('settings.authSaveFailed'), 'error');
+  } finally {
+    savingSecuritySettings.value = false;
+  }
 }
 
 const sessionRemainingFormatted = computed(() => {

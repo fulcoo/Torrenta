@@ -6,8 +6,7 @@ import json
 import tarfile
 import io
 import hashlib
-import re
-import platform
+import tempfile
 
 # 导入跨平台 fnpack 工具获取函数
 try:
@@ -24,15 +23,15 @@ if sys.platform == "win32":
         pass
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DIST_DIR = os.path.join(ROOT_DIR, "dist", "public")
-if not os.path.exists(DIST_DIR):
-    DIST_DIR = os.path.join(ROOT_DIR, "dist")
+DIST_DIR = os.path.join(ROOT_DIR, "dist", "fpk")
+DIRECT_DIST_DIR = os.path.join(ROOT_DIR, "dist", "fpk-direct")
 
 FPK_SRC_DIR = os.path.join(ROOT_DIR, "fpk_src")
-BIN_DIR = os.path.join(ROOT_DIR, "bin")
 RELEASE_DIR = os.path.join(ROOT_DIR, "release")
-DEFAULT_TORRENTA_PORT = "18322"
 DEFAULT_QB_PORT = "8080"
+DEFAULT_DIRECT_PORT = "18322"
+GATEWAY_PREFIX = "/app/torrenta"
+GATEWAY_SOCKET = "app.sock"
 
 def to_lf(text: str) -> str:
     """强制转换为 Unix LF 换行符"""
@@ -284,39 +283,56 @@ def verify_fpk(fpk_path: str):
         # 5. 检查内层 app.tgz 的有效性
         app_buf = io.BytesIO(raw_app_tgz)
         with tarfile.open(fileobj=app_buf, mode="r:gz") as inner_tar:
-            inner_names = set(inner_tar.getnames())
-            if not any("ui" in n for n in inner_names):
-                raise ValueError("❌ app.tgz 内部未找到 ui 资源目录！")
+            inner_members = {member.name.removeprefix("./"): member for member in inner_tar}
+            ui_config = json.load(inner_tar.extractfile(inner_members["ui/config"]))
+            entry = ui_config[".url"][manifest_dict["desktop_applaunchname"]]
+            if (entry["type"], entry["url"], entry["gatewayPrefix"], entry["gatewaySocket"]) != (
+                "iframe", f"{GATEWAY_PREFIX}/", GATEWAY_PREFIX, GATEWAY_SOCKET
+            ):
+                raise ValueError("❌ FPK 网关窗口入口配置不一致")
+            html = inner_tar.extractfile(inner_members["ui/index.html"]).read().decode("utf-8")
+            if f'src="{GATEWAY_PREFIX}/assets/' not in html:
+                raise ValueError("❌ FPK 前端产物缺少网关路径")
+            direct_html = inner_tar.extractfile(inner_members["direct-ui/index.html"]).read().decode("utf-8")
+            if 'src="/assets/' not in direct_html:
+                raise ValueError("❌ FPK 独立入口缺少根路径前端产物")
         
     print("✅ 归档格式校验正常 (tar.gz)")
     print(f"✅ 内层核心 app.tgz 存在且校验通过 (MD5: {actual_md5})")
     print(f"✅ manifest 清单信息有效，checksum 校验和严格匹配")
     print(f"✅ cmd/ 生命周期脚本完整且全部具备 0755 可执行权限 (共 {len([n for n in names if n.startswith('cmd/')])} 个脚本)")
     print(f"✅ config 权限与资源定义完备")
-    print("🎉 FPK 安装包 100% 符合飞牛私有云 (fnOS) 官方规范要求！")
+    print("✅ iframe 入口与前端网关路径校验通过")
     print("=" * 65)
 
 
 def main():
     print("=" * 65)
     print("🚀 使用官方 fnpack 构建 Torrenta 飞牛私有云 (fnOS) FPK 安装包")
-    print(f"📌 默认服务端口: {DEFAULT_TORRENTA_PORT} | 默认 qBittorrent 端口: {DEFAULT_QB_PORT}")
+    print(f"📌 网关入口: {GATEWAY_PREFIX}/ | 默认 qBittorrent 端口: {DEFAULT_QB_PORT}")
     print("=" * 65)
 
     # 1. 确保图标生成脚本就绪
     print("🎨 步骤 1/4: 从源图生成各规格应用图标...")
     subprocess.run([sys.executable, "scripts/generate_icons.py"], cwd=ROOT_DIR, check=True)
 
-    # 2. 前端编译检查
-    print("🔨 步骤 2/4: 执行 Vite 前端构建产物检查...")
-    if not os.path.exists(os.path.join(DIST_DIR, "index.html")):
-        print("未检测到 index.html，正在执行前端编译 (npm run build)...")
-        subprocess.run(["npm", "run", "build"], cwd=ROOT_DIR, shell=True, check=True)
-    else:
-        print(f"✅ 前端构建产物已就绪: {DIST_DIR}")
+    # 2. 分别构建网关和独立入口，避免复用已有或过期的构建产物。
+    print("🔨 步骤 2/4: 编译统一网关和独立入口的前端...")
+    npm = shutil.which("npm.cmd" if sys.platform == "win32" else "npm")
+    if not npm:
+        raise RuntimeError("未找到 npm，请先安装 Node.js 并运行 npm install。")
+    for base, directory, mode in ((f"{GATEWAY_PREFIX}/", DIST_DIR, "fpk-gateway"),
+                                  ("/", DIRECT_DIST_DIR, "fpk-direct")):
+        subprocess.run(
+            [npm, "run", "build", "--", "--mode", mode, "--base", base, "--outDir", directory],
+            cwd=ROOT_DIR,
+            check=True,
+        )
 
-    # 4. 组装 fpk_src 源码结构
-    print("📂 步骤 4/5: 组装官方规范源码目录 fpk_src/ ...")
+    # 3. 组装 fpk_src 源码结构
+    print("📂 步骤 3/4: 组装官方规范源码目录 fpk_src/ ...")
+    if os.path.realpath(FPK_SRC_DIR) != os.path.join(os.path.realpath(ROOT_DIR), "fpk_src"):
+        raise RuntimeError("FPK 组装目录必须位于项目根目录下。")
     if os.path.exists(FPK_SRC_DIR):
         shutil.rmtree(FPK_SRC_DIR)
     os.makedirs(FPK_SRC_DIR, exist_ok=True)
@@ -326,15 +342,8 @@ def main():
     shutil.copyfile(os.path.join(ROOT_DIR, "public", "icon-256.png"), os.path.join(FPK_SRC_DIR, "ICON_256.PNG"))
 
     # 4.2 写入 manifest 清单 (统一从 package.json 读取版本号，实现单一数据源维护)
-    pkg_path = os.path.join(ROOT_DIR, "package.json")
-    app_version = "0.3.6"
-    if os.path.exists(pkg_path):
-        try:
-            with open(pkg_path, "r", encoding="utf-8") as pf:
-                pkg_data = json.load(pf)
-                app_version = pkg_data.get("version", "0.3.6")
-        except Exception as e:
-            print(f"⚠️ 读取 package.json 版本号失败，使用默认版本: {e}")
+    with open(os.path.join(ROOT_DIR, "package.json"), encoding="utf-8") as package_file:
+        app_version = json.load(package_file)["version"]
 
 
     manifest_lines = [
@@ -346,8 +355,7 @@ def main():
         'source                = thirdparty',
         'maintainer            = fulco',
         'distributor           = fulco',
-        f'service_port          = {DEFAULT_TORRENTA_PORT}',
-        'checkport             = true',
+        'os_min_version        = 1.1.3100',
         'ctl_stop              = true',
         'desktop_uidir         = ui',
         'desktop_applaunchname = torrenta.Application'
@@ -360,6 +368,7 @@ def main():
     app_dir = os.path.join(FPK_SRC_DIR, "app")
     app_ui_dir = os.path.join(app_dir, "ui")
     os.makedirs(app_ui_dir, exist_ok=True)
+    shutil.copytree(DIRECT_DIST_DIR, os.path.join(app_dir, "direct-ui"))
 
     # 复制前端编译产物到 app/ui/
     for item in os.listdir(DIST_DIR):
@@ -386,11 +395,13 @@ def main():
             "torrenta.Application": {
                 "title": "Torrenta",
                 "icon": "images/icon_{0}.png",
-                "type": "url",
-                "protocol": "http",
-                "port": DEFAULT_TORRENTA_PORT,
-                "url": "/",
-                "allUsers": True
+                "type": "iframe",
+                "protocol": "",
+                "url": f"{GATEWAY_PREFIX}/",
+                "gatewayPrefix": GATEWAY_PREFIX,
+                "gatewaySocket": GATEWAY_SOCKET,
+                "allUsers": False,
+                "control": {"accessPerm": "readonly"}
             }
         }
     }
@@ -403,15 +414,13 @@ def main():
     shutil.copyfile(os.path.join(ROOT_DIR, "public", "icon-64.png"), os.path.join(images_dir, "icon_64.png"))
     shutil.copyfile(os.path.join(ROOT_DIR, "public", "icon-256.png"), os.path.join(images_dir, "icon_256.png"))
 
-    # 复制 server.py 脚本 (同时放入 fpk_src 根目录、app/ 根目录与 app/ui/ 目录)
+    # 服务脚本放在应用目录和兼容的安装根目录。
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "server.py"), os.path.join(FPK_SRC_DIR, "server.py"))
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "server.py"), os.path.join(app_dir, "server.py"))
-    shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "server.py"), os.path.join(app_ui_dir, "server.py"))
 
     # 复制 auto_config_qb.sh 自动化配置脚本
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(FPK_SRC_DIR, "auto_config_qb.sh"))
     shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(app_dir, "auto_config_qb.sh"))
-    shutil.copyfile(os.path.join(ROOT_DIR, "scripts", "auto_config_qb.sh"), os.path.join(app_ui_dir, "auto_config_qb.sh"))
 
     # 4.4 组装 wizard 安装向导 (严格遵循飞牛 fnOS 官方规范)
     wizard_dir = os.path.join(FPK_SRC_DIR, "wizard")
@@ -419,25 +428,8 @@ def main():
 
     wizard_spec = [
         {
-            "stepTitle": "服务与网络端口设置",
+            "stepTitle": "qBittorrent 连接设置",
             "items": [
-                {
-                    "type": "text",
-                    "field": "wizard_service_port",
-                    "label": "Torrenta 访问端口",
-                    "desc": f"设置 Torrenta Web界面的访问端口（默认: {DEFAULT_TORRENTA_PORT}）",
-                    "initValue": DEFAULT_TORRENTA_PORT,
-                    "rules": [
-                        {
-                            "required": True,
-                            "message": "请输入 Torrenta 端口号"
-                        },
-                        {
-                            "pattern": "^[0-9]+$",
-                            "message": "端口必须为纯数字"
-                        }
-                    ]
-                },
                 {
                     "type": "text",
                     "field": "wizard_qb_port",
@@ -450,10 +442,35 @@ def main():
                             "message": "请输入 qBittorrent 端口号"
                         },
                         {
-                            "pattern": "^[0-9]+$",
-                            "message": "端口必须为纯数字"
+                            "pattern": "^[1-9][0-9]{0,4}$",
+                            "message": "请输入 1 到 65535 之间的端口号"
                         }
                     ]
+                }
+            ]
+        },
+        {
+            "stepTitle": "独立网页访问",
+            "items": [
+                {
+                    "type": "text",
+                    "field": "wizard_direct_port",
+                    "label": "独立访问端口",
+                    "desc": f"留空保留原设置。启用时可填 {DEFAULT_DIRECT_PORT}，填 0 关闭独立端口。",
+                    "initValue": "",
+                    "rules": [
+                        {
+                            "pattern": "^([0-9]{1,5})?$",
+                            "message": "请输入 0 到 65535 之间的端口号"
+                        }
+                    ]
+                },
+                {
+                    "type": "password",
+                    "field": "wizard_direct_password",
+                    "label": "独立访问密码",
+                    "desc": "可选。qBittorrent 开启登录校验时可使用原账号，独立账号名为 admin。留空保留已有密码。",
+                    "initValue": ""
                 }
             ]
         }
@@ -478,7 +495,7 @@ def main():
     config_dir = os.path.join(FPK_SRC_DIR, "config")
     os.makedirs(config_dir, exist_ok=True)
     privilege_content = '{\n    "defaults": {\n        "run-as": "package"\n    }\n}\n'
-    resource_content = f'{{\n    "port-config": {{\n        "service-port": {DEFAULT_TORRENTA_PORT}\n    }}\n}}\n'
+    resource_content = '{}\n'
     with open(os.path.join(config_dir, "privilege"), "wb") as f:
         f.write(to_lf(privilege_content).encode("utf-8"))
     with open(os.path.join(config_dir, "resource"), "wb") as f:
@@ -496,6 +513,7 @@ def main():
 
 APP_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")/.." && pwd)"
 TARGET_DIR="${{TRIM_APPDEST:-${{APP_DIR}}/target}}"
+SOCKET_PATH="${{TARGET_DIR}}/{GATEWAY_SOCKET}"
 
 # 智能推断飞牛应用持久化目录 TRIM_PKGVAR 与 DATA_DIR
 if [ -z "${{TRIM_PKGVAR}}" ]; then
@@ -620,12 +638,30 @@ status() {{
         local pid
         pid=$(head -n 1 "${{PID_FILE}}" 2>/dev/null | tr -d '[:space:]')
         if [ -n "$pid" ] && check_process "$pid"; then
-            return 0
+            [ -S "${{SOCKET_PATH}}" ]
+            return $?
         else
             rm -f "${{PID_FILE}}"
         fi
     fi
     return 1
+}}
+
+gateway_responds() {{
+    [ -S "${{SOCKET_PATH}}" ] || return 1
+    "$1" -c '
+import http.client
+import socket
+import sys
+
+with socket.socket(socket.AF_UNIX) as connection:
+    connection.settimeout(1)
+    connection.connect(sys.argv[1])
+    connection.sendall(b"GET / HTTP/1.0\\r\\n\\r\\n")
+    response = http.client.HTTPResponse(connection)
+    response.begin()
+    sys.exit(response.status != 403)
+' "${{SOCKET_PATH}}" 2>/dev/null
 }}
 
 start_process() {{
@@ -634,14 +670,9 @@ start_process() {{
         return 0
     fi
 
-    # 清理旧 PID
+    # 清理仍在运行但已经失去 Socket 的旧进程。
     if [ -r "${{PID_FILE}}" ]; then
-        local old_pid
-        old_pid=$(head -n 1 "${{PID_FILE}}" 2>/dev/null | tr -d '[:space:]')
-        if [ -n "$old_pid" ] && check_process "$old_pid"; then
-            kill -9 "$old_pid" 2>/dev/null || true
-        fi
-        rm -f "${{PID_FILE}}"
+        stop_process
     fi
 
     local web_root
@@ -651,8 +682,14 @@ start_process() {{
     local py_bin
     py_bin=$(find_python)
 
-    # 导出端口变量（用户向导输入 > 环境变量 > 默认 18322）
-    export SERVICE_PORT="${{SERVICE_PORT:-{DEFAULT_TORRENTA_PORT}}}"
+    if [ -z "$py_bin" ] || [ -z "$server_script" ] || [ ! -f "$web_root/index.html" ]; then
+        log_msg "ERROR: Python, the Torrenta server script, and the built UI are required."
+        return 1
+    fi
+
+    export GATEWAY_SOCKET_PATH="${{SOCKET_PATH}}"
+    export GATEWAY_PREFIX="{GATEWAY_PREFIX}"
+    export TORRENTA_DIRECT_WEB_ROOT="$(dirname "$web_root")/direct-ui"
     export QBITTORRENT_PORT="${{QBITTORRENT_PORT:-{DEFAULT_QB_PORT}}}"
     export WEB_ROOT="${{web_root}}"
     export TRIM_APPDEST="${{TARGET_DIR}}"
@@ -668,38 +705,23 @@ start_process() {{
     log_msg "Discovered Web Root: ${{web_root}}"
     log_msg "Discovered Server Script: ${{server_script}}"
     log_msg "Discovered Python: ${{py_bin}}"
-    log_msg "Starting Torrenta on port ${{SERVICE_PORT}}, targeting qBittorrent on port ${{QBITTORRENT_PORT}}..."
-
-    local p_id=""
-
-    # 优先方案 A: Python 高可用服务 (自带反向代理与多用户支持)
-    if [ -n "$py_bin" ] && [ -n "$server_script" ]; then
-        log_msg "Launching via Python server ($py_bin $server_script)..."
-        nohup "$py_bin" -u "$server_script" >> "${{LOG_FILE}}" 2>&1 &
-        p_id=$!
-        sleep 0.8
-        if check_process "$p_id"; then
-            printf "%s" "$p_id" > "${{PID_FILE}}"
-            log_msg "Torrenta successfully running on Python (PID: $p_id)"
+    log_msg "Starting Torrenta at ${{SOCKET_PATH}}, targeting qBittorrent on port ${{QBITTORRENT_PORT}}..."
+    local p_id attempt
+    nohup "$py_bin" -u "$server_script" >> "${{LOG_FILE}}" 2>&1 &
+    p_id=$!
+    for ((attempt = 0; attempt < 30; attempt++)); do
+        check_process "$p_id" || break
+        if gateway_responds "$py_bin" && check_process "$p_id"; then
+            printf "%s\\n" "$p_id" > "${{PID_FILE}}"
+            log_msg "Torrenta gateway is ready (PID: $p_id)"
             return 0
         fi
-        log_msg "Python launch did not stay active, checking fallback engines..."
-    fi
+        sleep 0.2
+    done
 
-    # 方案 B: Busybox httpd (飞牛 NAS 原生内置)
-    if command -v busybox >/dev/null 2>&1; then
-        log_msg "Launching fallback Busybox httpd on port ${{SERVICE_PORT}} (Root: ${{web_root}})..."
-        nohup busybox httpd -f -p "${{SERVICE_PORT}}" -h "${{web_root}}" >> "${{LOG_FILE}}" 2>&1 &
-        p_id=$!
-        sleep 0.8
-        if check_process "$p_id"; then
-            printf "%s" "$p_id" > "${{PID_FILE}}"
-            log_msg "Torrenta running on Busybox httpd (PID: $p_id)"
-            return 0
-        fi
-    fi
-
-    log_msg "ERROR: Failed to launch Torrenta web service with any available engine!"
+    kill -TERM "$p_id" 2>/dev/null || true
+    wait "$p_id" 2>/dev/null || true
+    log_msg "ERROR: Torrenta gateway did not respond at ${{SOCKET_PATH}}."
     return 1
 }}
 
@@ -774,18 +796,51 @@ else
     ENV_FILE="${{APP_DIR}}/torrenta.env"
 fi
 
-# 获取向导输入的变量（兼容 wizard_service_port 与 service_port 前缀）
-USER_TORRENTA_PORT="${{wizard_service_port:-${{service_port:-${{WIZARD_service_port:-${{WIZARD_SERVICE_PORT:-${{SERVICE_PORT:-{DEFAULT_TORRENTA_PORT}}}}}}}}}}}"
-USER_QB_PORT="${{wizard_qb_port:-${{qbittorrent_port:-${{qb_port:-${{WIZARD_qb_port:-${{WIZARD_qbittorrent_port:-${{QBITTORRENT_PORT:-{DEFAULT_QB_PORT}}}}}}}}}}}}}"
+# 保留升级前的 qBittorrent 连接配置，向导输入可覆盖旧端口。
+if [ -f "${{ENV_FILE}}" ]; then
+    source "${{ENV_FILE}}" 2>/dev/null || true
+fi
+PREVIOUS_QB_PORT="${{QBITTORRENT_PORT:-{DEFAULT_QB_PORT}}}"
+USER_QB_PORT="$PREVIOUS_QB_PORT"
+for field in wizard_qb_port qbittorrent_port qb_port WIZARD_qb_port WIZARD_qbittorrent_port; do
+    if [ -n "${{!field}}" ]; then
+        USER_QB_PORT="${{!field}}"
+        break
+    fi
+done
+if [[ ! "$USER_QB_PORT" =~ ^[0-9]{{1,5}}$ ]] || ((10#$USER_QB_PORT < 1 || 10#$USER_QB_PORT > 65535)); then
+    echo "qBittorrent 端口必须为 1 到 65535 之间的数字。" >&2
+    exit 1
+fi
+if [ "$USER_QB_PORT" != "$PREVIOUS_QB_PORT" ]; then
+    unset QBITTORRENT_URL QBITTORRENT_HOST
+fi
 
-cat <<EOF > "${{ENV_FILE}}"
-SERVICE_PORT=${{USER_TORRENTA_PORT}}
-QBITTORRENT_PORT=${{USER_QB_PORT}}
-QBITTORRENT_URL=http://127.0.0.1:${{USER_QB_PORT}}
-QBITTORRENT_HOST=127.0.0.1:${{USER_QB_PORT}}
-TRIM_PKGVAR=${{TRIM_PKGVAR}}
-DATA_DIR=${{TRIM_PKGVAR}}
-EOF
+DIRECT_PORT="$wizard_direct_port"
+if [ -z "$DIRECT_PORT" ] && {{ [ "$TORRENTA_DIRECT_FORM_AUTH" = 1 ] || [ -n "$TORRENTA_DIRECT_PASSWORD" ]; }}; then
+    DIRECT_PORT="$TORRENTA_DIRECT_PORT"
+fi
+DIRECT_PASSWORD="${{wizard_direct_password:-${{TORRENTA_DIRECT_PASSWORD:-}}}}"
+if [ -z "$DIRECT_PORT" ] && [ -n "$DIRECT_PASSWORD" ]; then
+    DIRECT_PORT="${{SERVICE_PORT:-{DEFAULT_DIRECT_PORT}}}"
+fi
+DIRECT_PORT="${{DIRECT_PORT:-0}}"
+if [[ ! "$DIRECT_PORT" =~ ^[0-9]{{1,5}}$ ]] || ((10#$DIRECT_PORT > 65535)); then
+    echo "独立访问端口必须为 0 到 65535 之间的数字。" >&2
+    exit 1
+fi
+
+umask 077
+TORRENTA_ENV_TEMP=$(mktemp "${{ENV_FILE}}.XXXXXX") || exit 1
+trap 'rm -f -- "$TORRENTA_ENV_TEMP"' EXIT
+printf '%s=%q\\n' \\
+    QBITTORRENT_PORT "$USER_QB_PORT" \\
+    QBITTORRENT_URL "${{QBITTORRENT_URL:-http://127.0.0.1:$USER_QB_PORT}}" \\
+    QBITTORRENT_HOST "${{QBITTORRENT_HOST:-127.0.0.1:$USER_QB_PORT}}" \\
+    QBITTORRENT_USER "${{QBITTORRENT_USER}}" QBITTORRENT_PASS "${{QBITTORRENT_PASS}}" \\
+    TORRENTA_DIRECT_PORT "$DIRECT_PORT" TORRENTA_DIRECT_PASSWORD "$DIRECT_PASSWORD" TORRENTA_DIRECT_FORM_AUTH 1 \\
+    > "$TORRENTA_ENV_TEMP" || exit 1
+mv -f -- "$TORRENTA_ENV_TEMP" "${{ENV_FILE}}" || exit 1
 
 # 自动跨版本迁移保留用户的个性化设置文件 (user_settings*.json)
 if [ -n "${{TRIM_PKGVAR}}" ] && [ -d "${{TRIM_PKGVAR}}" ]; then
@@ -799,28 +854,6 @@ if [ -n "${{TRIM_PKGVAR}}" ] && [ -d "${{TRIM_PKGVAR}}" ]; then
         fi
     done
 fi
-
-# 同时同步写入 TARGET_DIR 和 APP_DIR 下作为备份
-cp -f "${{ENV_FILE}}" "${{TARGET_DIR}}/torrenta.env" 2>/dev/null || true
-cp -f "${{ENV_FILE}}" "${{APP_DIR}}/torrenta.env" 2>/dev/null || true
-if [ -n "${{TRIM_PKGETC}}" ]; then
-    mkdir -p "${{TRIM_PKGETC}}" 2>/dev/null || true
-    cp -f "${{ENV_FILE}}" "${{TRIM_PKGETC}}/torrenta.env" 2>/dev/null || true
-fi
-
-# 动态改写桌面快捷方式配置 ui/config 中的端口，确保桌面图标打开的 URL 与实际端口一致
-for cfg in \\
-    "${{TARGET_DIR}}/ui/config" \\
-    "${{TARGET_DIR}}/app/ui/config" \\
-    "${{APP_DIR}}/target/ui/config" \\
-    "${{APP_DIR}}/ui/config" \\
-    "${{APP_DIR}}/app/ui/config" \\
-    "/var/apps/torrenta/target/ui/config" \\
-    "/var/apps/torrenta/ui/config"; do
-    if [ -f "$cfg" ]; then
-        sed -i "s/\\\"port\\\": *\\\"[0-9]*\\\"/\\\"port\\\": \\\"${{USER_TORRENTA_PORT}}\\\"/g" "$cfg" 2>/dev/null || true
-    fi
-done
 
 exit 0
 """
@@ -848,59 +881,45 @@ exit 0
     shutil.copyfile(os.path.join(config_dir, "resource"), os.path.join(app_config_dir, "resource"))
 
     # 5. 构建 .fpk 安装包
-    print("🗜️  步骤 5/5: 构建 .fpk 安装包...")
+    print("🗜️  步骤 4/4: 构建 .fpk 安装包...")
     os.makedirs(RELEASE_DIR, exist_ok=True)
     dest_fpk = os.path.join(RELEASE_DIR, "torrenta.fpk")
     
     # 优先使用官方 fnpack 打包工具
     fnpack_bin = ensure_fnpack()
-    built_success = False
+    with tempfile.TemporaryDirectory(dir=RELEASE_DIR, prefix="fpk-build-") as staging_dir:
+        staged_fpk = None
+        if fnpack_bin:
+            print(f"📦 调用官方 fnpack 工具 [{fnpack_bin}]...")
+            result = subprocess.run(
+                [fnpack_bin, "build", "-d", FPK_SRC_DIR],
+                cwd=staging_dir,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            print(result.stdout)
+            if result.returncode == 0:
+                staged_fpk = next(
+                    (os.path.join(staging_dir, name) for name in os.listdir(staging_dir) if name.endswith(".fpk")),
+                    None,
+                )
+                if staged_fpk and sys.platform == "win32":
+                    fix_fpk_permissions(staged_fpk)
+            else:
+                print("⚠️ fnpack 构建未成功:\n", result.stderr)
 
-    if fnpack_bin and os.path.exists(fnpack_bin):
-        print(f"📦 发现官方 fnpack 工具 [{fnpack_bin}]，调用官方引擎构建...")
-        # 清理旧的 .fpk 文件
-        for f in os.listdir(ROOT_DIR):
-            if f.endswith(".fpk"):
-                try:
-                    os.remove(os.path.join(ROOT_DIR, f))
-                except Exception:
-                    pass
+        if not staged_fpk:
+            print("📦 采用 Python 封包引擎构建 .fpk 安装包...")
+            staged_fpk = os.path.join(staging_dir, "torrenta.fpk")
+            package_fpk_python(FPK_SRC_DIR, staged_fpk)
 
-        result = subprocess.run([fnpack_bin, "build", "-d", "fpk_src"], cwd=ROOT_DIR, capture_output=True, text=True)
-        print(result.stdout)
-        if result.returncode == 0:
-            for f in os.listdir(ROOT_DIR):
-                if f.endswith(".fpk"):
-                    src_fpk = os.path.join(ROOT_DIR, f)
-                    shutil.move(src_fpk, dest_fpk)
-                    if sys.platform == "win32":
-                        fix_fpk_permissions(dest_fpk)
-                    built_success = True
-                    break
-        else:
-            print("⚠️ fnpack 构建未成功:\n", result.stderr)
+        verify_fpk(staged_fpk)
+        os.replace(staged_fpk, dest_fpk)
 
-    if not built_success:
-        print("📦 采用 Python 原生规范封包引擎构建 .fpk 安装包...")
-        package_fpk_python(FPK_SRC_DIR, dest_fpk)
-        built_success = True
-
-    if os.path.exists(dest_fpk):
-        file_size_kb = os.path.getsize(dest_fpk) / 1024
-        print("=" * 65)
-        print("🎉 飞牛官方 FPK 安装包构建成功！")
-        print(f"📦 安装包文件名: torrenta.fpk")
-        print(f"📁 完整保存路径: {dest_fpk}")
-        print(f"📊 安装包大小  : {file_size_kb:.2f} KB ({file_size_kb/1024:.2f} MB)")
-        print(f"⚙️ 默认端口设定: Torrenta -> {DEFAULT_TORRENTA_PORT} | qBittorrent -> {DEFAULT_QB_PORT}")
-        print(f"📋 安装向导文件: wizard/install (已注入端口输入交互界面)")
-        print("=" * 65)
-        
-        # 执行全面合规性审计，确保完全符合飞牛系统安装要求
-        verify_fpk(dest_fpk)
-    else:
-        print("❌ 未能生成 .fpk 文件，请检查打包日志。")
-        sys.exit(1)
+    file_size_kb = os.path.getsize(dest_fpk) / 1024
+    print(f"🎉 Torrenta {app_version} FPK: {dest_fpk} ({file_size_kb:.2f} KB)")
 
 if __name__ == "__main__":
     main()
