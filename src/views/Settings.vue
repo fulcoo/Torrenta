@@ -224,7 +224,7 @@
           </div>
 
           <!-- Hide Speed Card Option -->
-          <div class="relative z-10 text-left flex items-center justify-between gap-3 pb-3.5 sm:pb-6 border-b border-base-content/10">
+          <div class="relative z-0 text-left flex items-center justify-between gap-3 pb-3.5 sm:pb-6 border-b border-base-content/10">
             <div class="flex flex-col gap-0.5 sm:gap-1 max-w-[80%]">
               <h2 class="text-sm sm:text-base font-bold flex items-center gap-2">
                 <GaugeIcon class="h-4 w-4 sm:h-5 sm:w-5 text-primary" /> {{ t('settings.hideSpeedCard') }}

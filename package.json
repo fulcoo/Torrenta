@@ -1,7 +1,7 @@
 {
   "name": "torrenta",
   "private": true,
-  "version": "0.4.8",
+  "version": "0.4.9",
   "description": "✨ A beautiful, easy-to-use, and lightweight WebUI client for qBittorrent. 🚀",
   "type": "module",
   "scripts": {
